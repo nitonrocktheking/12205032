@@ -232,18 +232,19 @@ export const playEnemyCard = (state: GameState, cardIndex: number, pos: Position
 function drawNextCard(state: GameState, cardIndex: number, faction: Faction) {
   if (faction === 'player') {
     const next = state.nextCard;
-    if (!next) return;
+    if (!next || state.deck.length === 0) return;
+    // The card we just played goes to the back of the deck (Clash Royale rotation).
+    const played = state.hand[cardIndex];
     state.hand[cardIndex] = next;
-    const from = state.deck.length > 0 ? state.deck.shift()! : DECK[Math.floor(Math.random() * DECK.length)];
-    state.deck.push(state.hand[cardIndex]);
-    state.nextCard = from;
+    state.nextCard = state.deck.shift()!;
+    state.deck.push(played);
   } else {
     const next = state.enemyNextCard;
-    if (!next) return;
+    if (!next || state.enemyDeck.length === 0) return;
+    const played = state.enemyHand[cardIndex];
     state.enemyHand[cardIndex] = next;
-    const from = state.enemyDeck.length > 0 ? state.enemyDeck.shift()! : DECK[Math.floor(Math.random() * DECK.length)];
-    state.enemyDeck.push(state.enemyHand[cardIndex]);
-    state.enemyNextCard = from;
+    state.enemyNextCard = state.enemyDeck.shift()!;
+    state.enemyDeck.push(played);
   }
 }
 
