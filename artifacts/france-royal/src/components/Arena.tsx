@@ -42,8 +42,6 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
     const cy = ((e.clientY - rect.top)  / rect.height) * ARENA_HEIGHT;
 
     if (flipped) {
-      // Player 2: screen bottom = internal top (enemy's side)
-      // cy > ARENA_HEIGHT/2 means the bottom screen half → internal y < ARENA_HEIGHT/2
       const iy = ARENA_HEIGHT - cy;
       if (cy > ARENA_HEIGHT / 2) onClick(cx, iy);
     } else {
@@ -59,28 +57,41 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
 
   const displayX = (ix: number) => (ix / ARENA_WIDTH) * 100;
 
-  // River display positions (same in both orientations — river is always in the middle)
   const riverTopPct    = flipped
     ? ((ARENA_HEIGHT - (RIVER_Y + RIVER_HEIGHT / 2)) / ARENA_HEIGHT) * 100
     : ((RIVER_Y - RIVER_HEIGHT / 2) / ARENA_HEIGHT) * 100;
   const riverHeightPct = (RIVER_HEIGHT / ARENA_HEIGHT) * 100;
 
   const bridgeTopPct    = flipped
-    ? ((ARENA_HEIGHT - (RIVER_Y + RIVER_HEIGHT / 2 + 4)) / ARENA_HEIGHT) * 100
-    : ((RIVER_Y - RIVER_HEIGHT / 2 - 4) / ARENA_HEIGHT) * 100;
-  const bridgeHeightPct = ((RIVER_HEIGHT + 8) / ARENA_HEIGHT) * 100;
+    ? ((ARENA_HEIGHT - (RIVER_Y + RIVER_HEIGHT / 2 + 6)) / ARENA_HEIGHT) * 100
+    : ((RIVER_Y - RIVER_HEIGHT / 2 - 6) / ARENA_HEIGHT) * 100;
+  const bridgeHeightPct = ((RIVER_HEIGHT + 12) / ARENA_HEIGHT) * 100;
+
+  // Pseudo-3D grass: radial spotlight + linear gradient for depth
+  const grassBackground = `
+    radial-gradient(ellipse 80% 60% at 50% 50%, ${arena.grassBottom}cc 0%, transparent 70%),
+    linear-gradient(to bottom, ${arena.grassTop} 0%, ${arena.grassBottom} 50%, ${arena.grassTop} 100%)
+  `;
 
   return (
     <div
       className="w-full h-full relative cursor-crosshair overflow-hidden touch-none select-none"
-      style={{ background: `linear-gradient(to bottom, ${arena.grassTop} 50%, ${arena.grassBottom} 100%)` }}
+      style={{
+        background: grassBackground,
+        boxShadow: `
+          inset 0 12px 24px rgba(0,0,0,0.55),
+          inset 0 -12px 24px rgba(0,0,0,0.55),
+          inset 12px 0 24px rgba(0,0,0,0.45),
+          inset -12px 0 24px rgba(0,0,0,0.45)
+        `,
+      }}
       onClick={handleClick}
       data-testid="arena"
       data-arena={arena.id}
     >
-      {/* Grass grid */}
+      {/* Grass grid (subtle pitch lines) */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
           opacity: arena.gridOpacity,
           backgroundImage:
@@ -89,51 +100,89 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         }}
       />
 
-      {/* Arena name watermark */}
-      <div className="absolute top-2 right-2 z-10 pointer-events-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-white/30">
-        <span>{arena.emoji}</span><span>{arena.name}</span>
-      </div>
-
-      {/* Center divider */}
-      <div className="absolute w-full border-t border-dashed border-white/10" style={{ top: "50%" }} />
-
-      {/* River */}
+      {/* Vignette overlay for depth */}
       <div
-        className="absolute w-full"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          top: `${riverTopPct}%`,
-          height: `${riverHeightPct}%`,
-          background: `linear-gradient(to bottom, ${arena.riverTop}, ${arena.riverBottom})`,
-          borderTop: `2px solid ${arena.riverBorder}`,
-          borderBottom: `2px solid ${arena.riverBorder}`,
+          background: "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.4) 100%)",
         }}
       />
 
+      {/* Corner decorations (themed) */}
+      <div className="absolute top-3 left-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
+      <div className="absolute top-3 right-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
+      <div className="absolute bottom-3 left-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
+      <div className="absolute bottom-3 right-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
+
+      {/* Center divider */}
+      <div className="absolute w-full border-t border-dashed border-white/15" style={{ top: "50%" }} />
+
+      {/* River — multi-stop gradient + inset shadow for "depth" */}
+      <div
+        className="absolute w-full overflow-hidden"
+        style={{
+          top: `${riverTopPct}%`,
+          height: `${riverHeightPct}%`,
+          background: `linear-gradient(to bottom,
+            rgba(0,0,0,0.45) 0%,
+            ${arena.riverTop} 18%,
+            ${arena.riverBottom} 50%,
+            ${arena.riverTop} 82%,
+            rgba(0,0,0,0.45) 100%)`,
+          borderTop: `2px solid ${arena.riverBorder}`,
+          borderBottom: `2px solid ${arena.riverBorder}`,
+          boxShadow: "inset 0 6px 12px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div className="absolute inset-0 arena-water" />
+        <div className="absolute inset-0 arena-water-wave" />
+      </div>
+
       {/* Left bridge */}
       <div
-        className="absolute"
+        className="absolute arena-bridge-planks"
         style={{
           left: `${((LEFT_BRIDGE_X - BRIDGE_WIDTH / 2) / ARENA_WIDTH) * 100}%`,
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: arena.bridgeColor,
-          borderLeft: `2px solid ${arena.bridgeBorder}`,
-          borderRight: `2px solid ${arena.bridgeBorder}`,
+          background: `linear-gradient(to bottom,
+            ${arena.bridgeBorder} 0%,
+            ${arena.bridgeColor} 15%,
+            ${arena.bridgeColor} 85%,
+            rgba(0,0,0,0.6) 100%)`,
+          borderLeft: `3px solid ${arena.bridgeBorder}`,
+          borderRight: `3px solid ${arena.bridgeBorder}`,
+          borderRadius: "3px",
+          boxShadow: `
+            inset 0 2px 0 rgba(255,255,255,0.25),
+            inset 0 -2px 0 rgba(0,0,0,0.4),
+            0 4px 6px rgba(0,0,0,0.55)
+          `,
           zIndex: 5,
         }}
       />
       {/* Right bridge */}
       <div
-        className="absolute"
+        className="absolute arena-bridge-planks"
         style={{
           left: `${((RIGHT_BRIDGE_X - BRIDGE_WIDTH / 2) / ARENA_WIDTH) * 100}%`,
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: arena.bridgeColor,
-          borderLeft: `2px solid ${arena.bridgeBorder}`,
-          borderRight: `2px solid ${arena.bridgeBorder}`,
+          background: `linear-gradient(to bottom,
+            ${arena.bridgeBorder} 0%,
+            ${arena.bridgeColor} 15%,
+            ${arena.bridgeColor} 85%,
+            rgba(0,0,0,0.6) 100%)`,
+          borderLeft: `3px solid ${arena.bridgeBorder}`,
+          borderRight: `3px solid ${arena.bridgeBorder}`,
+          borderRadius: "3px",
+          boxShadow: `
+            inset 0 2px 0 rgba(255,255,255,0.25),
+            inset 0 -2px 0 rgba(0,0,0,0.4),
+            0 4px 6px rgba(0,0,0,0.55)
+          `,
           zIndex: 5,
         }}
       />
@@ -166,7 +215,7 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
       ))}
 
       {/* Side label */}
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-white/25 font-bold uppercase tracking-widest pointer-events-none">
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-white/40 font-bold uppercase tracking-widest pointer-events-none drop-shadow">
         {localFaction === "enemy" ? "Votre camp (rouge)" : "Votre camp"}
       </div>
     </div>
