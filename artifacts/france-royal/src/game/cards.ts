@@ -280,6 +280,186 @@ export const CARDS: Record<string, CardDef> = {
     radius: 13,
     imagePath: philippeImg,
   },
+
+  // ─── Présidents historiques ────────────────────────────────────────────────
+  degaulle: {
+    id: 'degaulle', fullName: "Charles de Gaulle", name: "Le Général",
+    powerName: "Appel du 18 Juin", powerDesc: "Tank légendaire, régénère ses PV",
+    cost: 6, color: "#1e40af", label: "DG", spawnCount: 1,
+    baseHp: 2200, baseDamage: 140, speed: 28, range: 45, attackSpeed: 1.2, radius: 20,
+    special: "hp_regen",
+  },
+  mitterrand: {
+    id: 'mitterrand', fullName: "François Mitterrand", name: "Le Sphinx",
+    powerName: "Force Tranquille", powerDesc: "Soigne les alliés proches",
+    cost: 4, color: "#be123c", label: "MIT", spawnCount: 1,
+    baseHp: 700, baseDamage: 60, speed: 32, range: 65, attackSpeed: 1.0, radius: 14,
+    special: "heal_boost",
+  },
+  giscard: {
+    id: 'giscard', fullName: "Valéry Giscard d'Estaing", name: "V.G.E.",
+    powerName: "Le Modéré", powerDesc: "Polyvalent, ni trop fort ni trop faible",
+    cost: 4, color: "#0891b2", label: "VGE", spawnCount: 1,
+    baseHp: 750, baseDamage: 90, speed: 45, range: 35, attackSpeed: 0.9, radius: 14,
+  },
+  pompidou: {
+    id: 'pompidou', fullName: "Georges Pompidou", name: "Le Banquier",
+    powerName: "Garde Présidentielle", powerDesc: "Arrive avec 2 gardes du corps",
+    cost: 5, color: "#475569", label: "POM", spawnCount: 3,
+    baseHp: 800, baseDamage: 100, speed: 40, range: 35, attackSpeed: 1.0, radius: 15,
+    special: "bodyguard",
+  },
+
+  // ─── Figures historiques ───────────────────────────────────────────────────
+  napoleon: {
+    id: 'napoleon', fullName: "Napoléon Bonaparte", name: "L'Empereur",
+    powerName: "Grognards", powerDesc: "Arrive avec 4 grognards en formation",
+    cost: 5, color: "#7c2d12", label: "NAP", spawnCount: 4,
+    baseHp: 500, baseDamage: 80, speed: 42, range: 32, attackSpeed: 0.9, radius: 13,
+    special: "aoe",
+  },
+  jeanne: {
+    id: 'jeanne', fullName: "Jeanne d'Arc", name: "La Pucelle",
+    powerName: "Sainte Charge", powerDesc: "Fonce sur les tours sans s'arrêter",
+    cost: 4, color: "#fbbf24", label: "JDA", spawnCount: 1,
+    baseHp: 1100, baseDamage: 130, speed: 50, range: 35, attackSpeed: 1.1, radius: 16,
+    special: "building_target",
+  },
+  louis14: {
+    id: 'louis14', fullName: "Louis XIV", name: "Le Roi Soleil",
+    powerName: "L'État c'est moi", powerDesc: "Tank ultime, lent et impitoyable",
+    cost: 7, color: "#a16207", label: "L14", spawnCount: 1,
+    baseHp: 2800, baseDamage: 180, speed: 22, range: 50, attackSpeed: 1.5, radius: 22,
+  },
+  robespierre: {
+    id: 'robespierre', fullName: "Maximilien Robespierre", name: "L'Incorruptible",
+    powerName: "La Terreur", powerDesc: "Dégâts de zone, même les alliés trinquent",
+    cost: 5, color: "#991b1b", label: "ROB", spawnCount: 1,
+    baseHp: 900, baseDamage: 160, speed: 35, range: 45, attackSpeed: 1.4, radius: 16,
+    special: "friendly_fire",
+  },
+  danton: {
+    id: 'danton', fullName: "Georges Danton", name: "L'Audacieux",
+    powerName: "De l'Audace !", powerDesc: "Escouade rapide à dégâts de zone",
+    cost: 4, color: "#7f1d1d", label: "DAN", spawnCount: 3,
+    baseHp: 450, baseDamage: 70, speed: 50, range: 35, attackSpeed: 0.9, radius: 13,
+    special: "aoe",
+  },
+
+  // ─── Ministres / politiques contemporains ──────────────────────────────────
+  attal: {
+    id: 'attal', fullName: "Gabriel Attal", name: "Le Jeune Premier",
+    powerName: "Communication Express", powerDesc: "Léger et très rapide",
+    cost: 2, color: "#38bdf8", label: "ATT", spawnCount: 1,
+    baseHp: 280, baseDamage: 40, speed: 90, range: 28, attackSpeed: 0.6, radius: 11,
+  },
+  borne: {
+    id: 'borne', fullName: "Élisabeth Borne", name: "L'Ingénieure",
+    powerName: "Soin Méthodique", powerDesc: "Soigne et booste les alliés",
+    cost: 4, color: "#0e7490", label: "BOR", spawnCount: 1,
+    baseHp: 500, baseDamage: 30, speed: 33, range: 70, attackSpeed: 1.0, radius: 13,
+    special: "heal_boost",
+  },
+  castex: {
+    id: 'castex', fullName: "Jean Castex", name: "L'Occitan",
+    powerName: "Pas Cher", powerDesc: "Cheap et discret, fait son boulot",
+    cost: 1, color: "#64748b", label: "CAS", spawnCount: 1,
+    baseHp: 200, baseDamage: 25, speed: 50, range: 25, attackSpeed: 0.7, radius: 10,
+  },
+  valls: {
+    id: 'valls', fullName: "Manuel Valls", name: "Le Catalan",
+    powerName: "Coup Dur", powerDesc: "Frappe fort en mêlée",
+    cost: 3, color: "#1e293b", label: "VAL", spawnCount: 1,
+    baseHp: 600, baseDamage: 100, speed: 45, range: 25, attackSpeed: 0.8, radius: 13,
+  },
+  royal: {
+    id: 'royal', fullName: "Ségolène Royal", name: "La Présidente du Poitou",
+    powerName: "Bienveillance", powerDesc: "Soutien à distance, soigne les alliés",
+    cost: 3, color: "#db2777", label: "ROY", spawnCount: 1,
+    baseHp: 380, baseDamage: 25, speed: 38, range: 75, attackSpeed: 1.0, radius: 12,
+    special: "heal_boost",
+  },
+  fillon: {
+    id: 'fillon', fullName: "François Fillon", name: "Le Costumé",
+    powerName: "Cabinet Solide", powerDesc: "Robuste mais coûteux à entretenir",
+    cost: 4, color: "#334155", label: "FIL", spawnCount: 1,
+    baseHp: 900, baseDamage: 95, speed: 35, range: 35, attackSpeed: 1.0, radius: 14,
+  },
+  lemaire: {
+    id: 'lemaire', fullName: "Bruno Le Maire", name: "Le Ministre",
+    powerName: "Prélèvement", powerDesc: "Vole 2 élixirs à l'ennemi à la pose",
+    cost: 3, color: "#854d0e", label: "LMR", spawnCount: 1,
+    baseHp: 350, baseDamage: 35, speed: 40, range: 30, attackSpeed: 1.0, radius: 12,
+    special: "steal_elixir",
+  },
+  darmanin: {
+    id: 'darmanin', fullName: "Gérald Darmanin", name: "L'Intérieur",
+    powerName: "Renforts", powerDesc: "Arrive avec 2 agents de protection",
+    cost: 4, color: "#1f2937", label: "DAR", spawnCount: 3,
+    baseHp: 600, baseDamage: 85, speed: 42, range: 32, attackSpeed: 1.0, radius: 13,
+    special: "bodyguard",
+  },
+
+  // ─── Groupes / corps de métier ─────────────────────────────────────────────
+  crs: {
+    id: 'crs', fullName: "Brigade CRS", name: "Forces de l'Ordre",
+    powerName: "Charge Coordonnée", powerDesc: "Escouade de 5 agents équipés",
+    cost: 4, color: "#0f172a", label: "CRS", spawnCount: 5,
+    baseHp: 320, baseDamage: 45, speed: 38, range: 28, attackSpeed: 1.0, radius: 11,
+  },
+  agriculteur: {
+    id: 'agriculteur', fullName: "Le Paysan", name: "Agriculteur en Colère",
+    powerName: "Tracteur Bloquant", powerDesc: "Ralentit les ennemis autour de lui",
+    cost: 2, color: "#65a30d", label: "AGR", spawnCount: 1,
+    baseHp: 550, baseDamage: 30, speed: 22, range: 25, attackSpeed: 1.5, radius: 13,
+    special: "slow_aura",
+  },
+  pompier: {
+    id: 'pompier', fullName: "Le Pompier", name: "Sapeur de Paris",
+    powerName: "Lance à Eau", powerDesc: "Soigne les alliés à grande distance",
+    cost: 3, color: "#dc2626", label: "POMP", spawnCount: 1,
+    baseHp: 450, baseDamage: 20, speed: 45, range: 80, attackSpeed: 1.0, radius: 12,
+    special: "heal_boost",
+  },
+  journaliste: {
+    id: 'journaliste', fullName: "Le Journaliste", name: "Reporter de Choc",
+    powerName: "Micro Tendu", powerDesc: "Très cheap et rapide, peu de PV",
+    cost: 1, color: "#7e22ce", label: "JRN", spawnCount: 1,
+    baseHp: 150, baseDamage: 20, speed: 100, range: 28, attackSpeed: 0.5, radius: 9,
+  },
+  lyceen: {
+    id: 'lyceen', fullName: "Les Lycéens", name: "Manif de Lycée",
+    powerName: "Horde Jeune", powerDesc: "Essaim de 4 lycéens en grève",
+    cost: 2, color: "#f59e0b", label: "LYC", spawnCount: 4,
+    baseHp: 180, baseDamage: 18, speed: 50, range: 22, attackSpeed: 0.9, radius: 9,
+  },
+  taxi: {
+    id: 'taxi', fullName: "Le Chauffeur de Taxi", name: "Taxi Parisien",
+    powerName: "Charge Mécanique", powerDesc: "Très rapide, frappe en mêlée",
+    cost: 2, color: "#facc15", label: "TAX", spawnCount: 1,
+    baseHp: 340, baseDamage: 45, speed: 95, range: 22, attackSpeed: 0.7, radius: 12,
+  },
+  syndicat: {
+    id: 'syndicat', fullName: "Le Syndicaliste", name: "Le Représentant",
+    powerName: "Mouvement Social", powerDesc: "Dégâts de zone et appel à la grève",
+    cost: 4, color: "#b91c1c", label: "SYN", spawnCount: 2,
+    baseHp: 500, baseDamage: 65, speed: 32, range: 38, attackSpeed: 1.1, radius: 14,
+    special: "aoe",
+  },
+  sncf: {
+    id: 'sncf', fullName: "Les Cheminots", name: "Bloqueurs SNCF",
+    powerName: "Grève sur les Voies", powerDesc: "Horde de 6, ralentit les ennemis",
+    cost: 4, color: "#1d4ed8", label: "SNCF", spawnCount: 6,
+    baseHp: 220, baseDamage: 22, speed: 30, range: 25, attackSpeed: 1.2, radius: 9,
+    special: "slow_aura",
+  },
+  ouvrier: {
+    id: 'ouvrier', fullName: "L'Ouvrier", name: "Bleu de Travail",
+    powerName: "Marteau Lourd", powerDesc: "Frappe puissamment les bâtiments",
+    cost: 3, color: "#a16207", label: "OUV", spawnCount: 1,
+    baseHp: 700, baseDamage: 110, speed: 35, range: 28, attackSpeed: 1.3, radius: 14,
+    special: "building_target",
+  },
 };
 
 export const DECK = Object.values(CARDS);

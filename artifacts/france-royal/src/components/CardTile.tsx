@@ -33,12 +33,23 @@ export default function CardTile({ cardId, locked, selected, onClick, size = "md
         background: `linear-gradient(155deg, ${card.color} 0%, #0f172a 100%)`,
       }}
     >
-      <img
-        src={card.imagePath}
-        alt={card.fullName}
-        className="absolute inset-0 w-full h-full object-cover object-top"
-        draggable={false}
-      />
+      {card.imagePath ? (
+        <img
+          src={card.imagePath}
+          alt={card.fullName}
+          className="absolute inset-0 w-full h-full object-cover object-top"
+          draggable={false}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className="font-black text-white/95 drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)] tracking-tight leading-none text-center px-1"
+            style={{ fontSize: size === "lg" ? 22 : size === "md" ? 18 : 15 }}
+          >
+            {card.label}
+          </span>
+        </div>
+      )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1 pt-2 pb-1">
         <div className="text-[10px] font-black text-white truncate text-center">{card.label}</div>
       </div>

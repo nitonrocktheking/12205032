@@ -1,7 +1,18 @@
 export const ALL_CARDS = [
+  // Starters
   "macron", "melenchon", "hollande", "sarkozy", "philippe",
   "gilets", "taxe", "piaf",
+  // Original unlockables
   "zemmour", "marine", "bardella", "bardot", "chirac", "jmlepen",
+  // Présidents historiques
+  "degaulle", "mitterrand", "giscard", "pompidou",
+  // Figures historiques
+  "napoleon", "jeanne", "louis14", "robespierre", "danton",
+  // Ministres contemporains
+  "attal", "borne", "castex", "valls", "royal", "fillon", "lemaire", "darmanin",
+  // Groupes / corps de métier
+  "crs", "agriculteur", "pompier", "journaliste", "lyceen", "taxi",
+  "syndicat", "sncf", "ouvrier",
 ] as const;
 
 export const STARTER_CARDS = [
