@@ -1,45 +1,66 @@
-# [Project name]
+# France Royal
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A Clash Royale-style browser arena game where French political personalities battle on a vertical mobile-style arena. Solo vs AI and 1v1 online multiplayer over WebSockets.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — API server + WebSocket (port from $PORT)
+- `pnpm --filter @workspace/france-royal run dev` — game web app
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL`, Clerk vars (`CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`) — auto-provisioned
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- API: Express 5 + WebSocket (`ws`)
 - DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Auth: Replit-managed Clerk (email/password + Google + GitHub/Apple/X)
+- Frontend: React + Vite + Tailwind v4 + shadcn/ui + @clerk/react
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
-
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Game engine — `artifacts/france-royal/src/game/engine.ts` (deterministic, seeded for MP)
+- Card defs — `artifacts/france-royal/src/game/cards.ts` (14 cards)
+- Backend card catalog (IDs only) — `artifacts/api-server/src/lib/cardsCatalog.ts`
+- WebSocket rooms (MP relay) — `artifacts/api-server/src/ws/rooms.ts`
+- DB schemas — `lib/db/src/schema/{userProfiles,userCards,userDecks}.ts`
+- Auth + API routes — `artifacts/api-server/src/{app.ts,routes/me.ts}`
+- Frontend auth wiring — `artifacts/france-royal/src/App.tsx`
+- Hooks for user data — `artifacts/france-royal/src/hooks/useMe.ts`
+- Pages — Menu, Game, Lobby, Results, SignInPage, SignUpPage, Collection, DeckEditor
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Account system (Clerk) — both pseudo+password and Google sign-in.
+- Card collection (14 personalities). New players get 8 starter cards; 6 unlockable.
+- Deck editor with 3 deck slots; the active deck is used in Solo matches.
+- Solo (vs AI) and Multiplayer (1v1, WebSocket, 4-letter room codes).
+- Match rewards: XP + gold every match; winning unlocks a random new card until full collection.
+- Pseudo-3D "Clash" feel via CSS (gradients, drop shadows, raised buttons with active-press effect).
+
+## Architecture decisions
+
+- Game state lives in a ref, advanced at ~60Hz; React re-renders only at `RENDER_RATE`.
+- `createInitialState(seed?, playerDeckIds?, enemyDeckIds?)` — solo passes the player's selected deck; MP uses default deck for both for now (deck sync deferred).
+- JIT user provisioning on first `/api/me` call: profile row + starter cards + slot-0 deck.
+- Match reward endpoint trusts the client `{result}` — acceptable for casual MVP, not anti-cheat.
+- Backend stores only card IDs; full card definitions remain client-side.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- App language: French.
+- Both email/password AND Google login required (Clerk handles both natively).
+- Pseudo-3D style via CSS, not Three.js.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Clerk's `<SignIn path>` / `<SignUp path>` need the **full** path including base path (`${basePath}/sign-in`). Route paths in wouter remain base-relative with `/sign-in/*?` (optional wildcard required for OAuth sub-paths).
+- `tailwindcss({ optimize: false })` in `vite.config.ts` is required so `@clerk/themes/shadcn.css` `@layer` imports work in prod.
+- After adding/changing tables in `lib/db/src/schema/`, run `pnpm run typecheck:libs` so other packages see the new exports.
+- Engine's `enemyHand`/`enemyDeck` is local and assumed identical between MP peers — both sides must use the same deck definition; that's why MP currently uses the default deck on both sides.
 
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `clerk-auth` skill for the canonical auth wiring (cookie-based on web, do NOT add Bearer tokens)

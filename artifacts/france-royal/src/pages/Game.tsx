@@ -7,6 +7,7 @@ import Arena from "../components/Arena";
 import HUD from "../components/HUD";
 import CardHand from "../components/CardHand";
 import { useMultiplayer } from "../hooks/useMultiplayer";
+import { useMe, getSelectedDeck } from "../hooks/useMe";
 
 function parseParams() {
   const p = new URLSearchParams(window.location.search);
@@ -18,14 +19,14 @@ function parseParams() {
   return { seed, isMultiplayer, localFaction };
 }
 
-export default function Game() {
+function GameInner({ seed, isMultiplayer, localFaction, deck }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[] }) {
   const [, setLocation] = useLocation();
-  const { seed, isMultiplayer, localFaction } = parseParams();
-
-  const gameStateRef = useRef<GameState>(createInitialState(seed));
+  const gameStateRef = useRef<GameState>(createInitialState(seed, deck));
   const [renderState, setRenderState] = useState<GameState>(() => ({ ...gameStateRef.current }));
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [opponentLeft, setOpponentLeft] = useState(false);
+
+  void isMultiplayer; void localFaction; // referenced below
 
   // ── Multiplayer WebSocket relay ────────────────────────────────────────────
   const { sendPlayCard } = useMultiplayer({
@@ -153,4 +154,20 @@ export default function Game() {
       />
     </div>
   );
+}
+
+export default function Game() {
+  const { seed, isMultiplayer, localFaction } = parseParams();
+  const { data: me, isLoading } = useMe();
+
+  // Wait for user data before initializing solo state so we use the selected deck.
+  // MP doesn't need it (uses default deck for both sides for now).
+  if (!isMultiplayer && isLoading) {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Préparation de l'arène…</div>;
+  }
+
+  const deck = isMultiplayer ? undefined : getSelectedDeck(me);
+  const finalDeck = deck && deck.length === 8 ? deck : undefined;
+
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} />;
 }

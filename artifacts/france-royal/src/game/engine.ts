@@ -28,7 +28,7 @@ function shuffleWithRng<T>(arr: T[], rng: () => number): T[] {
 }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
-export const createInitialState = (seed?: number): GameState => {
+export const createInitialState = (seed?: number, playerDeckIds?: string[], enemyDeckIds?: string[]): GameState => {
   const rng = seed !== undefined ? seededRandom(seed) : Math.random;
 
   const playerTowers = getTowerPositions('player');
@@ -42,8 +42,14 @@ export const createInitialState = (seed?: number): GameState => {
     attackSpeed: TOWER_ATTACK_SPEED, lastAttackTime: Infinity,
   });
 
-  const playerShuffle = shuffleWithRng(DECK, rng);
-  const enemyShuffle  = shuffleWithRng(DECK, rng);
+  const resolveDeck = (ids?: string[]) => {
+    if (!ids || ids.length < 4) return DECK;
+    const resolved = ids.map((id) => CARDS[id]).filter((c): c is CardDef => !!c);
+    return resolved.length >= 4 ? resolved : DECK;
+  };
+
+  const playerShuffle = shuffleWithRng(resolveDeck(playerDeckIds), rng);
+  const enemyShuffle  = shuffleWithRng(resolveDeck(enemyDeckIds),  rng);
   const isMultiplayer = seed !== undefined;
 
   return {
