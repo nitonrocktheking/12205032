@@ -6,6 +6,7 @@ export type MPMessage =
   | { type: "opponent_joined" }
   | { type: "opponent_play_card"; cardIndex: number; x: number; y: number }
   | { type: "opponent_left" }
+  | { type: "rejoined"; code: string; faction: "player" | "enemy" }
   | { type: "error"; message: string };
 
 interface Options {
@@ -43,8 +44,10 @@ export function useMultiplayer({ onMessage, onOpen, onClose }: Options) {
 
   const createRoom = useCallback(() => send({ type: "create_room" }), [send]);
   const joinRoom   = useCallback((code: string) => send({ type: "join_room", code }), [send]);
+  const rejoinRoom = useCallback((code: string, faction: "player" | "enemy") =>
+    send({ type: "rejoin_room", code, faction }), [send]);
   const sendPlayCard = useCallback((cardIndex: number, x: number, y: number) =>
     send({ type: "play_card", cardIndex, x, y }), [send]);
 
-  return { createRoom, joinRoom, sendPlayCard };
+  return { createRoom, joinRoom, rejoinRoom, sendPlayCard };
 }

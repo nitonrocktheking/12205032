@@ -14,13 +14,14 @@ function parseParams() {
   const p = new URLSearchParams(window.location.search);
   const seedStr = p.get("seed");
   const faction = p.get("faction") as Faction | null;
+  const code = p.get("code");
   const seed = seedStr !== null ? Number(seedStr) : undefined;
   const isMultiplayer = seed !== undefined;
   const localFaction: Faction = faction === "enemy" ? "enemy" : "player";
-  return { seed, isMultiplayer, localFaction };
+  return { seed, isMultiplayer, localFaction, roomCode: code };
 }
 
-function GameInner({ seed, isMultiplayer, localFaction, deck, arena }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme }) {
+function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null }) {
   const [, setLocation] = useLocation();
   const gameStateRef = useRef<GameState>(createInitialState(seed, deck));
   const [renderState, setRenderState] = useState<GameState>(() => ({ ...gameStateRef.current }));
@@ -30,19 +31,25 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena }: { seed?: 
   void isMultiplayer; void localFaction; // referenced below
 
   // ── Multiplayer WebSocket relay ────────────────────────────────────────────
-  const { sendPlayCard } = useMultiplayer({
+  const { sendPlayCard, rejoinRoom } = useMultiplayer({
     onMessage: (msg) => {
       if (msg.type === "opponent_play_card") {
-        // The opponent played a card — apply it to our local game state
         if (localFaction === "player") {
-          // Opponent controls enemy faction
           playEnemyCard(gameStateRef.current, msg.cardIndex, { x: msg.x, y: msg.y });
         } else {
-          // Opponent controls player faction
           playCard(gameStateRef.current, msg.cardIndex, { x: msg.x, y: msg.y });
         }
       } else if (msg.type === "opponent_left") {
         setOpponentLeft(true);
+      } else if (msg.type === "error" && isMultiplayer) {
+        // Rejoin failed (room expired) — treat as opponent gone.
+        setOpponentLeft(true);
+      }
+    },
+    onOpen: () => {
+      // After navigating from Lobby, re-attach to the same room with the same faction.
+      if (isMultiplayer && roomCode) {
+        rejoinRoom(roomCode, localFaction);
       }
     },
   });
@@ -158,7 +165,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena }: { seed?: 
 }
 
 export default function Game() {
-  const { seed, isMultiplayer, localFaction } = parseParams();
+  const { seed, isMultiplayer, localFaction, roomCode } = parseParams();
   const { data: me, isLoading } = useMe();
 
   // Wait for user data before initializing solo state so we use the selected deck.
@@ -171,5 +178,5 @@ export default function Game() {
   const finalDeck = deck && deck.length === 8 ? deck : undefined;
   const arena = getArenaForLevel(me?.profile.level ?? 1) ?? ARENAS[0];
 
-  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} />;
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} />;
 }

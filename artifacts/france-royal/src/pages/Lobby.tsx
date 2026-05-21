@@ -18,19 +18,21 @@ function LobbySession({
   const [roomCode, setRoomCode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const seedRef = useRef(0);
+  const codeRef = useRef("");
 
   const handleMessage = useCallback(
     (msg: MPMessage) => {
       if (msg.type === "room_created") {
         seedRef.current = msg.seed;
+        codeRef.current = msg.code;
         setRoomCode(msg.code);
         setPhase("creating");
       } else if (msg.type === "opponent_joined") {
-        // Host: opponent connected → start game
-        setLocation(`/game?seed=${seedRef.current}&faction=player`);
+        // Host: opponent connected → start game (pass code so we can rejoin the room)
+        setLocation(`/game?seed=${seedRef.current}&faction=player&code=${codeRef.current}`);
       } else if (msg.type === "room_joined") {
-        // Guest: we joined → navigate
-        setLocation(`/game?seed=${msg.seed}&faction=enemy`);
+        // Guest: we joined → navigate (pass code so we can rejoin the room)
+        setLocation(`/game?seed=${msg.seed}&faction=enemy&code=${msg.code}`);
       } else if (msg.type === "opponent_left") {
         setPhase("error");
         setErrorMsg("L'adversaire a quitté la salle.");
