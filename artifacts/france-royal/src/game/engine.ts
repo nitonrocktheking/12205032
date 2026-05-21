@@ -30,7 +30,7 @@ export const createInitialState = (): GameState => {
     timeRemaining: GAME_DURATION,
     elapsedTime: 0,
     status: 'playing',
-    elixir: { player: 5, enemy: 5 },
+    elixir: { player: 5, enemy: 2 },
     units: [],
     towers: [
       createTower('p_king',   'player', 'king',     playerTowers.king),
@@ -43,7 +43,7 @@ export const createInitialState = (): GameState => {
     deck: shuffledDeck.slice(5),
     hand: shuffledDeck.slice(0, 4),
     nextCard: shuffledDeck[4],
-    enemyNextSpawnTime: GAME_DURATION - 5,
+    enemyNextSpawnTime: GAME_DURATION - 10,
     floatingTexts: [],
   };
 };
@@ -61,20 +61,26 @@ export const updateGame = (state: GameState, dt: number) => {
     return;
   }
 
-  // Elixir generation
+  // Elixir generation — enemy gets elixir slightly slower
   state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
-  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * dt);
+  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * 0.7 * dt);
 
-  // Enemy AI
+  // Enemy AI — spawn every 8-14 seconds, prefer cheap cards
   if (state.timeRemaining <= state.enemyNextSpawnTime) {
     const allCards = Object.values(CARDS);
-    const card = allCards[Math.floor(Math.random() * allCards.length)];
+    // Weighted pick: cheaper cards are 3x more likely
+    const weighted: CardDef[] = [];
+    for (const c of allCards) {
+      const weight = c.cost <= 3 ? 3 : c.cost <= 5 ? 2 : 1;
+      for (let w = 0; w < weight; w++) weighted.push(c);
+    }
+    const card = weighted[Math.floor(Math.random() * weighted.length)];
     if (state.elixir.enemy >= card.cost) {
       state.elixir.enemy -= card.cost;
       const spawnX = 80 + Math.random() * (ARENA_WIDTH - 160);
       spawnUnit(state, card, 'enemy', { x: spawnX, y: 155 });
     }
-    state.enemyNextSpawnTime = state.timeRemaining - (3 + Math.random() * 5);
+    state.enemyNextSpawnTime = state.timeRemaining - (8 + Math.random() * 6);
   }
 
   // Slow aura reset each tick (recalculated below)
