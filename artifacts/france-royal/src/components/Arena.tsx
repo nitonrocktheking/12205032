@@ -35,11 +35,45 @@ interface Props {
   arena?: ArenaTheme;
 }
 
+// Decorative rock — fixed-size pseudo-3D pebble using CSS gradient
+function Rock({ left, top, size = 18 }: { left: string; top: string; size?: number }) {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left, top,
+        width: size, height: size * 0.7,
+        marginLeft: -size / 2,
+        marginTop: -size * 0.35,
+        borderRadius: "50%",
+        background: "radial-gradient(ellipse at 35% 30%, #d6d3d1 0%, #78716c 60%, #44403c 100%)",
+        boxShadow: "0 2px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
+        zIndex: 6,
+      }}
+    />
+  );
+}
+
+// Playing field is inset from the stone frame. Keep in sync with the
+// playing-field <div> styles below (top/bottom 2.5%, left/right 4%).
+const FIELD_INSET_X = 0.04;
+const FIELD_INSET_Y = 0.025;
+
 export default function Arena({ state, onClick, flipped = false, localFaction = "player", arena = ARENAS[0] }: Props) {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const cx = ((e.clientX - rect.left) / rect.width)  * ARENA_WIDTH;
-    const cy = ((e.clientY - rect.top)  / rect.height) * ARENA_HEIGHT;
+    const fieldLeftPx = rect.width  * FIELD_INSET_X;
+    const fieldTopPx  = rect.height * FIELD_INSET_Y;
+    const fieldW = rect.width  * (1 - 2 * FIELD_INSET_X);
+    const fieldH = rect.height * (1 - 2 * FIELD_INSET_Y);
+
+    const lx = e.clientX - rect.left - fieldLeftPx;
+    const ly = e.clientY - rect.top  - fieldTopPx;
+    // Reject clicks on the stone frame
+    if (lx < 0 || ly < 0 || lx > fieldW || ly > fieldH) return;
+
+    const cx = (lx / fieldW) * ARENA_WIDTH;
+    const cy = (ly / fieldH) * ARENA_HEIGHT;
 
     if (flipped) {
       const iy = ARENA_HEIGHT - cy;
@@ -49,12 +83,10 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
     }
   };
 
-  // Map internal Y → display Y%
   const displayY = (iy: number) =>
     flipped
       ? ((ARENA_HEIGHT - iy) / ARENA_HEIGHT) * 100
       : (iy / ARENA_HEIGHT) * 100;
-
   const displayX = (ix: number) => (ix / ARENA_WIDTH) * 100;
 
   const riverTopPct    = flipped
@@ -63,127 +95,188 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
   const riverHeightPct = (RIVER_HEIGHT / ARENA_HEIGHT) * 100;
 
   const bridgeTopPct    = flipped
-    ? ((ARENA_HEIGHT - (RIVER_Y + RIVER_HEIGHT / 2 + 6)) / ARENA_HEIGHT) * 100
-    : ((RIVER_Y - RIVER_HEIGHT / 2 - 6) / ARENA_HEIGHT) * 100;
-  const bridgeHeightPct = ((RIVER_HEIGHT + 12) / ARENA_HEIGHT) * 100;
+    ? ((ARENA_HEIGHT - (RIVER_Y + RIVER_HEIGHT / 2 + 8)) / ARENA_HEIGHT) * 100
+    : ((RIVER_Y - RIVER_HEIGHT / 2 - 8) / ARENA_HEIGHT) * 100;
+  const bridgeHeightPct = ((RIVER_HEIGHT + 16) / ARENA_HEIGHT) * 100;
 
-  // Pseudo-3D grass: radial spotlight + linear gradient for depth
-  const grassBackground = `
-    radial-gradient(ellipse 80% 60% at 50% 50%, ${arena.grassBottom}cc 0%, transparent 70%),
-    linear-gradient(to bottom, ${arena.grassTop} 0%, ${arena.grassBottom} 50%, ${arena.grassTop} 100%)
+  // Checkerboard grass — 50px tiles (8 cols × 12 rows in 400×600)
+  const checkerBackground = `
+    linear-gradient(45deg, ${arena.tileDark} 25%, transparent 25%, transparent 75%, ${arena.tileDark} 75%),
+    linear-gradient(45deg, ${arena.tileDark} 25%, transparent 25%, transparent 75%, ${arena.tileDark} 75%),
+    ${arena.tileLight}
   `;
+
+  // Stone path positions (from king to each bridge)
+  // King is at y=55 (enemy) and y=545 (player); bridges at LEFT_BRIDGE_X=100, RIGHT_BRIDGE_X=300
+  const pathWidth = 20;
 
   return (
     <div
       className="w-full h-full relative cursor-crosshair overflow-hidden touch-none select-none"
       style={{
-        background: grassBackground,
-        boxShadow: `
-          inset 0 12px 24px rgba(0,0,0,0.55),
-          inset 0 -12px 24px rgba(0,0,0,0.55),
-          inset 12px 0 24px rgba(0,0,0,0.45),
-          inset -12px 0 24px rgba(0,0,0,0.45)
-        `,
+        background: arena.borderColor,
+        padding: 0,
       }}
       onClick={handleClick}
       data-testid="arena"
       data-arena={arena.id}
     >
-      {/* Grass grid (subtle pitch lines) */}
+      {/* Stone border frame with corner highlights */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none z-[1]"
         style={{
-          opacity: arena.gridOpacity,
-          backgroundImage:
-            "repeating-linear-gradient(0deg,transparent,transparent 39px,#000 39px,#000 40px)," +
-            "repeating-linear-gradient(90deg,transparent,transparent 39px,#000 39px,#000 40px)",
+          background: `
+            radial-gradient(circle at 0% 0%, ${arena.borderHighlight} 0%, transparent 8%),
+            radial-gradient(circle at 100% 0%, ${arena.borderHighlight} 0%, transparent 8%),
+            radial-gradient(circle at 0% 100%, ${arena.borderHighlight} 0%, transparent 8%),
+            radial-gradient(circle at 100% 100%, ${arena.borderHighlight} 0%, transparent 8%)
+          `,
+          boxShadow: `inset 0 0 0 2px rgba(0,0,0,0.4)`,
         }}
       />
 
-      {/* Vignette overlay for depth */}
+      {/* Playing field (inset from border) */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute"
         style={{
-          background: "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.4) 100%)",
+          top: "2.5%", bottom: "2.5%", left: "4%", right: "4%",
+          background: checkerBackground,
+          backgroundSize: "50px 50px, 50px 50px, auto",
+          backgroundPosition: "0 0, 25px 25px, 0 0",
+          boxShadow: `
+            inset 0 0 0 2px rgba(0,0,0,0.35),
+            inset 0 4px 6px rgba(0,0,0,0.25),
+            inset 0 -4px 6px rgba(0,0,0,0.25)
+          `,
         }}
       />
 
-      {/* Corner decorations (themed) */}
-      <div className="absolute top-3 left-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
-      <div className="absolute top-3 right-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
-      <div className="absolute bottom-3 left-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
-      <div className="absolute bottom-3 right-3 text-2xl pointer-events-none opacity-50 drop-shadow-[0_3px_2px_rgba(0,0,0,0.6)]">{arena.emoji}</div>
-
-      {/* Center divider */}
-      <div className="absolute w-full border-t border-dashed border-white/15" style={{ top: "50%" }} />
-
-      {/* River — multi-stop gradient + inset shadow for "depth" */}
+      {/* Stone paths (from king tower to bridges) — drawn inside the field area */}
       <div
-        className="absolute w-full overflow-hidden"
+        className="absolute pointer-events-none z-[2]"
         style={{
+          left: `${((LEFT_BRIDGE_X - pathWidth / 2) / ARENA_WIDTH) * 100}%`,
+          width: `${(pathWidth / ARENA_WIDTH) * 100}%`,
+          top: "8%",
+          bottom: "8%",
+          background: `repeating-linear-gradient(
+            0deg,
+            ${arena.pathColor} 0px,
+            ${arena.pathColor} 8px,
+            rgba(0,0,0,0.2) 8px,
+            rgba(0,0,0,0.2) 10px
+          )`,
+          opacity: 0.35,
+        }}
+      />
+      <div
+        className="absolute pointer-events-none z-[2]"
+        style={{
+          left: `${((RIGHT_BRIDGE_X - pathWidth / 2) / ARENA_WIDTH) * 100}%`,
+          width: `${(pathWidth / ARENA_WIDTH) * 100}%`,
+          top: "8%",
+          bottom: "8%",
+          background: `repeating-linear-gradient(
+            0deg,
+            ${arena.pathColor} 0px,
+            ${arena.pathColor} 8px,
+            rgba(0,0,0,0.2) 8px,
+            rgba(0,0,0,0.2) 10px
+          )`,
+          opacity: 0.35,
+        }}
+      />
+
+      {/* Center divider (subtle) */}
+      <div
+        className="absolute border-t-2 border-dashed border-white/15 pointer-events-none z-[3]"
+        style={{ top: "50%", left: "4%", right: "4%" }}
+      />
+
+      {/* River */}
+      <div
+        className="absolute overflow-hidden z-[4]"
+        style={{
+          left: "4%", right: "4%",
           top: `${riverTopPct}%`,
           height: `${riverHeightPct}%`,
           background: `linear-gradient(to bottom,
-            rgba(0,0,0,0.45) 0%,
-            ${arena.riverTop} 18%,
+            ${arena.riverBorder} 0%,
+            ${arena.riverTop} 15%,
             ${arena.riverBottom} 50%,
-            ${arena.riverTop} 82%,
-            rgba(0,0,0,0.45) 100%)`,
-          borderTop: `2px solid ${arena.riverBorder}`,
-          borderBottom: `2px solid ${arena.riverBorder}`,
-          boxShadow: "inset 0 6px 12px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.6)",
+            ${arena.riverTop} 85%,
+            ${arena.riverBorder} 100%)`,
+          borderTop: `3px solid ${arena.riverBorder}`,
+          borderBottom: `3px solid ${arena.riverBorder}`,
+          boxShadow: "inset 0 6px 10px rgba(0,0,0,0.5), inset 0 -6px 10px rgba(0,0,0,0.5)",
         }}
       >
         <div className="absolute inset-0 arena-water" />
         <div className="absolute inset-0 arena-water-wave" />
       </div>
 
-      {/* Left bridge */}
+      {/* Rocks along the river bank */}
+      <Rock left="6%"  top={`${riverTopPct - 1}%`} size={16} />
+      <Rock left="22%" top={`${riverTopPct - 0.5}%`} size={14} />
+      <Rock left="40%" top={`${riverTopPct - 1}%`} size={15} />
+      <Rock left="60%" top={`${riverTopPct - 0.5}%`} size={14} />
+      <Rock left="78%" top={`${riverTopPct - 1}%`} size={16} />
+      <Rock left="94%" top={`${riverTopPct - 0.5}%`} size={15} />
+      <Rock left="6%"  top={`${riverTopPct + riverHeightPct + 1}%`} size={16} />
+      <Rock left="22%" top={`${riverTopPct + riverHeightPct + 0.5}%`} size={14} />
+      <Rock left="40%" top={`${riverTopPct + riverHeightPct + 1}%`} size={15} />
+      <Rock left="60%" top={`${riverTopPct + riverHeightPct + 0.5}%`} size={14} />
+      <Rock left="78%" top={`${riverTopPct + riverHeightPct + 1}%`} size={16} />
+      <Rock left="94%" top={`${riverTopPct + riverHeightPct + 0.5}%`} size={15} />
+
+      {/* Left bridge — wooden planks */}
       <div
-        className="absolute arena-bridge-planks"
+        className="absolute z-[5]"
         style={{
           left: `${((LEFT_BRIDGE_X - BRIDGE_WIDTH / 2) / ARENA_WIDTH) * 100}%`,
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: `linear-gradient(to bottom,
-            ${arena.bridgeBorder} 0%,
-            ${arena.bridgeColor} 15%,
-            ${arena.bridgeColor} 85%,
-            rgba(0,0,0,0.6) 100%)`,
+          background: `repeating-linear-gradient(
+            0deg,
+            ${arena.bridgeBorder} 0px,
+            ${arena.bridgeColor} 2px,
+            ${arena.bridgeColor} 10px,
+            ${arena.bridgeBorder} 12px
+          )`,
           borderLeft: `3px solid ${arena.bridgeBorder}`,
           borderRight: `3px solid ${arena.bridgeBorder}`,
-          borderRadius: "3px",
+          borderRadius: "4px",
           boxShadow: `
-            inset 0 2px 0 rgba(255,255,255,0.25),
+            inset 0 2px 0 rgba(255,255,255,0.2),
             inset 0 -2px 0 rgba(0,0,0,0.4),
-            0 4px 6px rgba(0,0,0,0.55)
+            0 6px 8px rgba(0,0,0,0.55)
           `,
-          zIndex: 5,
         }}
       />
       {/* Right bridge */}
       <div
-        className="absolute arena-bridge-planks"
+        className="absolute z-[5]"
         style={{
           left: `${((RIGHT_BRIDGE_X - BRIDGE_WIDTH / 2) / ARENA_WIDTH) * 100}%`,
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: `linear-gradient(to bottom,
-            ${arena.bridgeBorder} 0%,
-            ${arena.bridgeColor} 15%,
-            ${arena.bridgeColor} 85%,
-            rgba(0,0,0,0.6) 100%)`,
+          background: `repeating-linear-gradient(
+            0deg,
+            ${arena.bridgeBorder} 0px,
+            ${arena.bridgeColor} 2px,
+            ${arena.bridgeColor} 10px,
+            ${arena.bridgeBorder} 12px
+          )`,
           borderLeft: `3px solid ${arena.bridgeBorder}`,
           borderRight: `3px solid ${arena.bridgeBorder}`,
-          borderRadius: "3px",
+          borderRadius: "4px",
           boxShadow: `
-            inset 0 2px 0 rgba(255,255,255,0.25),
+            inset 0 2px 0 rgba(255,255,255,0.2),
             inset 0 -2px 0 rgba(0,0,0,0.4),
-            0 4px 6px rgba(0,0,0,0.55)
+            0 6px 8px rgba(0,0,0,0.55)
           `,
-          zIndex: 5,
         }}
       />
 
@@ -214,9 +307,9 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         <FloatingTextComponent key={ft.id} ft={ft} elapsed={state.elapsedTime} />
       ))}
 
-      {/* Side label */}
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-white/40 font-bold uppercase tracking-widest pointer-events-none drop-shadow">
-        {localFaction === "enemy" ? "Votre camp (rouge)" : "Votre camp"}
+      {/* Arena name watermark */}
+      <div className="absolute top-1 right-2 z-[40] pointer-events-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-white/40 drop-shadow">
+        <span>{arena.emoji}</span><span>{arena.name}</span>
       </div>
     </div>
   );
