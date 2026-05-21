@@ -48,3 +48,39 @@ id = "yIl1VnXkTdEN8ogCsY3Bq"
 uri = "file://artifacts/france-royal/src/assets/politicians/sarkozy.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "uSeXtEOY0DL2PI63RTQwN"
+uri = "file://artifacts/france-royal/src/assets/politicians/hollande.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "OVhQqZOAmHhUw7BhvsEAi"
+uri = "file://artifacts/france-royal/src/assets/politicians/gilets.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "zzyaHlrMylWkzvzBHGYPb"
+uri = "file://artifacts/france-royal/src/assets/politicians/taxe.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "rpLYh4ArSonfyi1Yuce_k"
+uri = "file://artifacts/france-royal/src/assets/politicians/chirac.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "DD8BbXFTv0pmfnVEMdqvo"
+uri = "file://artifacts/france-royal/src/assets/politicians/jmlepen.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-lXY5blAcdAHhr9n368xJ"
+uri = "file://artifacts/france-royal/src/assets/politicians/philippe.png"
+type = "image"
+title = "generated_image"

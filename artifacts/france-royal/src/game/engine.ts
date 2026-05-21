@@ -1,116 +1,163 @@
-import { GameState, CardDef, Faction, Position, Tower, Unit } from "./types";
-import { 
+import { GameState, CardDef, Faction, Position, Tower, Unit, FloatingText } from "./types";
+import {
   ARENA_WIDTH, ARENA_HEIGHT, GAME_DURATION, MAX_ELIXIR, ELIXIR_RATE,
   TOWER_KING_HP, TOWER_PRINCESS_HP, TOWER_DAMAGE, TOWER_ATTACK_SPEED, TOWER_RANGE,
+  LEFT_BRIDGE_X, RIGHT_BRIDGE_X, RIVER_Y, RIVER_HEIGHT, UNIT_AGGRO_RANGE,
   getTowerPositions
 } from "./constants";
 import { CARDS, DECK } from "./cards";
+
+// ─── Initial State ──────────────────────────────────────────────────────────
 
 export const createInitialState = (): GameState => {
   const playerTowers = getTowerPositions('player');
   const enemyTowers = getTowerPositions('enemy');
 
   const createTower = (id: string, faction: Faction, type: 'king' | 'princess', pos: Position): Tower => ({
-    id,
-    faction,
-    type,
+    id, faction, type,
     hp: type === 'king' ? TOWER_KING_HP : TOWER_PRINCESS_HP,
     maxHp: type === 'king' ? TOWER_KING_HP : TOWER_PRINCESS_HP,
     position: pos,
     range: TOWER_RANGE,
     damage: TOWER_DAMAGE,
     attackSpeed: TOWER_ATTACK_SPEED,
-    lastAttackTime: Infinity
+    lastAttackTime: Infinity,
   });
 
   const shuffledDeck = [...DECK].sort(() => Math.random() - 0.5);
 
   return {
     timeRemaining: GAME_DURATION,
+    elapsedTime: 0,
     status: 'playing',
     elixir: { player: 5, enemy: 5 },
     units: [],
     towers: [
-      createTower('p_king', 'player', 'king', playerTowers.king),
+      createTower('p_king',   'player', 'king',     playerTowers.king),
       createTower('p_l_prin', 'player', 'princess', playerTowers.leftPrincess),
       createTower('p_r_prin', 'player', 'princess', playerTowers.rightPrincess),
-      createTower('e_king', 'enemy', 'king', enemyTowers.king),
-      createTower('e_l_prin', 'enemy', 'princess', enemyTowers.leftPrincess),
-      createTower('e_r_prin', 'enemy', 'princess', enemyTowers.rightPrincess),
+      createTower('e_king',   'enemy',  'king',     enemyTowers.king),
+      createTower('e_l_prin', 'enemy',  'princess', enemyTowers.leftPrincess),
+      createTower('e_r_prin', 'enemy',  'princess', enemyTowers.rightPrincess),
     ],
     deck: shuffledDeck.slice(5),
     hand: shuffledDeck.slice(0, 4),
     nextCard: shuffledDeck[4],
-    enemyNextSpawnTime: GAME_DURATION - 4,
+    enemyNextSpawnTime: GAME_DURATION - 5,
+    floatingTexts: [],
   };
 };
+
+// ─── Main Update Loop ────────────────────────────────────────────────────────
 
 export const updateGame = (state: GameState, dt: number) => {
   if (state.status !== 'playing') return;
 
   state.timeRemaining -= dt;
+  state.elapsedTime   += dt;
+
   if (state.timeRemaining <= 0) {
     checkWinCondition(state);
     return;
   }
 
-  // Elixir
-  if (state.elixir.player < MAX_ELIXIR) state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
-  if (state.elixir.enemy < MAX_ELIXIR) state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * dt);
+  // Elixir generation
+  state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
+  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * dt);
 
-  // Enemy AI — spawn when timeRemaining crosses enemyNextSpawnTime
+  // Enemy AI
   if (state.timeRemaining <= state.enemyNextSpawnTime) {
     const allCards = Object.values(CARDS);
-    const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
-    if (state.elixir.enemy >= randomCard.cost) {
-      state.elixir.enemy -= randomCard.cost;
+    const card = allCards[Math.floor(Math.random() * allCards.length)];
+    if (state.elixir.enemy >= card.cost) {
+      state.elixir.enemy -= card.cost;
       const spawnX = 80 + Math.random() * (ARENA_WIDTH - 160);
-      spawnUnit(state, randomCard, 'enemy', { x: spawnX, y: 160 });
+      spawnUnit(state, card, 'enemy', { x: spawnX, y: 155 });
     }
-    state.enemyNextSpawnTime = state.timeRemaining - (3 + Math.random() * 4);
+    state.enemyNextSpawnTime = state.timeRemaining - (3 + Math.random() * 5);
   }
 
-  // Units
+  // Slow aura reset each tick (recalculated below)
+  for (const u of state.units) {
+    u.speedMult = 1;
+  }
+
+  // Per-unit update
   for (const unit of state.units) {
     if (unit.hp <= 0) continue;
 
+    // ── Passives ──────────────────────────────────────────────────────────
+
+    // Piaf: heal nearby allies
     if (unit.special === 'heal_boost') {
-      // Piaf heals nearby allies
       for (const ally of state.units) {
-        if (ally.faction === unit.faction && ally.id !== unit.id) {
-          const d = distance(unit.position, ally.position);
-          if (d < 80) {
-            ally.hp = Math.min(ally.maxHp, ally.hp + 5 * dt);
+        if (ally.id !== unit.id && ally.faction === unit.faction) {
+          if (dist(unit.position, ally.position) < 80) {
+            ally.hp = Math.min(ally.maxHp, ally.hp + 20 * dt);
           }
         }
       }
     }
 
-    const target = findTarget(state, unit);
-    if (target) {
-      const dist = distance(unit.position, target.position);
-      if (dist <= unit.range + (target as any).radius || dist <= unit.range + 20) {
-        // In range — attack if cooldown elapsed
-        // lastAttackTime stores the timeRemaining value when last attack happened
-        // Since timeRemaining decreases, enough time has passed when:
-        // lastAttackTime - timeRemaining >= attackSpeed  (i.e. attackSpeed seconds have elapsed)
+    // Chirac: HP regen
+    if (unit.special === 'hp_regen') {
+      unit.hp = Math.min(unit.maxHp, unit.hp + 20 * dt);
+    }
+
+    // Gilets Jaunes: slow aura — mark nearby enemies
+    if (unit.special === 'slow_aura') {
+      for (const other of state.units) {
+        if (other.faction !== unit.faction && dist(unit.position, other.position) < 70) {
+          other.speedMult = Math.min(other.speedMult, 0.35);
+        }
+      }
+    }
+
+    // Hollande (scooter crash): after 7s becomes totally confused (drastic speed loss)
+    if (unit.special === 'scooter_crash') {
+      const age = state.elapsedTime - unit.spawnTime;
+      if (age > 7) {
+        unit.speedMult = Math.min(unit.speedMult, 0.15);
+      }
+    }
+
+    // ── Targeting & Movement ──────────────────────────────────────────────
+
+    const effectiveSpeed = unit.baseSpeed * unit.speedMult;
+
+    // 1. Find an enemy UNIT within aggro range (skip for building_target)
+    const nearbyEnemy = unit.special !== 'building_target'
+      ? findNearbyUnit(state, unit, UNIT_AGGRO_RANGE)
+      : null;
+
+    // 2. Find the target tower to walk toward
+    const targetTower = findTargetTower(state, unit);
+
+    if (nearbyEnemy) {
+      const d = dist(unit.position, nearbyEnemy.position);
+      if (d <= unit.range + nearbyEnemy.radius) {
+        // In melee range — attack
         if (unit.lastAttackTime - state.timeRemaining >= unit.attackSpeed) {
-          attack(unit, target, state);
+          attackUnit(unit, nearbyEnemy, state);
           unit.lastAttackTime = state.timeRemaining;
         }
       } else {
-        // Move towards target
-        const dirX = target.position.x - unit.position.x;
-        const dirY = target.position.y - unit.position.y;
-        const len = Math.sqrt(dirX * dirX + dirY * dirY);
-        if (len > 0) {
-          unit.position.x += (dirX / len) * unit.speed * dt;
-          unit.position.y += (dirY / len) * unit.speed * dt;
-        }
+        // Chase the nearby enemy
+        moveToward(unit, nearbyEnemy.position, effectiveSpeed, dt);
       }
-    } else {
-      // No target — walk forward toward enemy
-      unit.position.y += unit.faction === 'player' ? -unit.speed * dt : unit.speed * dt;
+    } else if (targetTower) {
+      const d = dist(unit.position, targetTower.position);
+      if (d <= unit.range + 20) {
+        // Attack the tower
+        if (unit.lastAttackTime - state.timeRemaining >= unit.attackSpeed) {
+          attackTower(unit, targetTower, state);
+          unit.lastAttackTime = state.timeRemaining;
+        }
+      } else {
+        // Navigate toward tower via bridge if river crossing needed
+        const waypoint = getBridgeWaypoint(unit, targetTower.position);
+        moveToward(unit, waypoint, effectiveSpeed, dt);
+      }
     }
   }
 
@@ -122,6 +169,7 @@ export const updateGame = (state: GameState, dt: number) => {
       if (tower.lastAttackTime - state.timeRemaining >= tower.attackSpeed) {
         target.hp -= tower.damage;
         tower.lastAttackTime = state.timeRemaining;
+        addFloatingText(state, `-${tower.damage}`, target.position, '#f87171');
       }
     }
   }
@@ -129,154 +177,276 @@ export const updateGame = (state: GameState, dt: number) => {
   // Cleanup dead units
   state.units = state.units.filter(u => u.hp > 0);
 
-  // Check win condition when a king tower dies
+  // Expire floating texts
+  state.floatingTexts = state.floatingTexts.filter(
+    ft => state.elapsedTime - ft.createdAt < 1.2
+  );
+
+  // Check king towers
   const deadKing = state.towers.find(t => t.type === 'king' && t.hp <= 0);
-  if (deadKing) {
-    checkWinCondition(state);
-  }
+  if (deadKing) checkWinCondition(state);
 };
 
-const spawnUnit = (state: GameState, card: CardDef, faction: Faction, pos: Position) => {
-  for (let i = 0; i < card.spawnCount; i++) {
-    const isMain = i === 0;
-    const offsetX = i === 0 ? 0 : (i % 2 === 0 ? 1 : -1) * 25 * Math.ceil(i / 2);
-    const offsetY = i > 0 ? 20 * Math.floor(i / 2) : 0;
-    state.units.push({
-      id: Math.random().toString(36).substr(2, 9),
-      type: card.id,
-      name: isMain ? card.fullName : `Insoumis`,
-      faction,
-      hp: isMain ? card.baseHp : Math.round(card.baseHp * 0.5),
-      maxHp: isMain ? card.baseHp : Math.round(card.baseHp * 0.5),
-      damage: isMain ? card.baseDamage : Math.round(card.baseDamage * 0.5),
-      speed: card.speed,
-      range: card.range,
-      attackSpeed: card.attackSpeed,
-      lastAttackTime: Infinity,
-      position: { x: pos.x + offsetX, y: pos.y + offsetY },
-      label: isMain ? card.label : 'INS',
-      color: faction === 'player' ? '#2563eb' : '#dc2626',
-      radius: isMain ? card.radius : Math.round(card.radius * 0.7),
-      special: isMain ? card.special : undefined,
-      imagePath: isMain ? card.imagePath : undefined,
-    });
-  }
-};
+// ─── Card Play ───────────────────────────────────────────────────────────────
 
-export const playCard = (state: GameState, cardIndex: number, pos: Position) => {
+export const playCard = (state: GameState, cardIndex: number, pos: Position): boolean => {
   const card = state.hand[cardIndex];
   if (!card || state.elixir.player < card.cost) return false;
 
   state.elixir.player -= card.cost;
 
-  // Clamp spawn position to player's side (bottom half)
-  const spawnPos = {
+  // Clamp to player's half
+  const spawnPos: Position = {
     x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
-    y: Math.max(ARENA_HEIGHT / 2 + 10, Math.min(ARENA_HEIGHT - 20, pos.y)),
+    y: Math.max(ARENA_HEIGHT / 2 + 15, Math.min(ARENA_HEIGHT - 20, pos.y)),
   };
 
   spawnUnit(state, card, 'player', spawnPos);
 
-  // Draw new card from deck
+  // Macron "Réformes" — costs the player 2 extra elixir
+  if (card.special === 'tax_allies') {
+    state.elixir.player = Math.max(0, state.elixir.player - 2);
+    addFloatingText(state, '-2 elixir (reforme)', spawnPos, '#fbbf24');
+  }
+
+  // Draw next card
   if (state.nextCard) {
     state.hand[cardIndex] = state.nextCard;
-    const nextDeck = state.deck.length > 0 ? state.deck.shift()! : DECK[Math.floor(Math.random() * DECK.length)];
+    const next = state.deck.length > 0
+      ? state.deck.shift()!
+      : DECK[Math.floor(Math.random() * DECK.length)];
     state.deck.push(card);
-    state.nextCard = nextDeck;
+    state.nextCard = next;
   }
+
   return true;
 };
 
-const distance = (p1: Position, p2: Position) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+// ─── Spawn ───────────────────────────────────────────────────────────────────
 
-const findTarget = (state: GameState, unit: Unit): { position: Position; hp: number; faction?: string; radius?: number } | null => {
-  let closest: any = null;
-  let minDist = Infinity;
+const spawnUnit = (state: GameState, card: CardDef, faction: Faction, pos: Position) => {
+  // Steal elixir on spawn (Taxe/Impôt)
+  if (card.special === 'steal_elixir' && faction === 'player') {
+    const stolen = Math.min(2, state.elixir.enemy);
+    state.elixir.enemy = Math.max(0, state.elixir.enemy - stolen);
+    state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + stolen);
+    addFloatingText(state, `+${stolen} elixir vole !`, pos, '#4ade80');
+  }
 
-  const check = (list: any[]) => {
-    for (const t of list) {
-      if (t.faction !== unit.faction && t.hp > 0) {
-        // building_target skips enemy units and only targets towers
-        if (unit.special === 'building_target' && t.radius !== undefined) continue;
-        const d = distance(unit.position, t.position);
-        if (d < minDist) {
-          minDist = d;
-          closest = t;
-        }
-      }
+  for (let i = 0; i < card.spawnCount; i++) {
+    const isMain = i === 0;
+    const offsetX = i === 0 ? 0 : (i % 2 === 0 ? 1 : -1) * 22 * Math.ceil(i / 2);
+    const offsetY = i > 0 ? 18 * Math.floor(i / 2) : 0;
+
+    const hp = isMain ? card.baseHp : Math.round(card.baseHp * 0.45);
+    const dmg = isMain ? card.baseDamage : Math.round(card.baseDamage * 0.45);
+
+    state.units.push({
+      id: Math.random().toString(36).slice(2, 10),
+      type: card.id,
+      name: card.fullName,
+      faction,
+      hp,
+      maxHp: hp,
+      damage: dmg,
+      speed: card.speed,
+      baseSpeed: card.speed,
+      speedMult: 1,
+      range: card.range,
+      attackSpeed: card.attackSpeed,
+      lastAttackTime: Infinity,
+      position: { x: pos.x + offsetX, y: pos.y + offsetY },
+      label: isMain ? card.label : (card.id === 'gilets' ? 'GJ' : 'MIN'),
+      color: faction === 'player' ? '#2563eb' : '#dc2626',
+      radius: isMain ? card.radius : Math.round(card.radius * 0.7),
+      special: isMain ? card.special : undefined,
+      imagePath: isMain ? card.imagePath : undefined,
+      spawnTime: state.elapsedTime,
+    });
+  }
+};
+
+// ─── Pathfinding / Movement ──────────────────────────────────────────────────
+
+const riverTop    = RIVER_Y - RIVER_HEIGHT / 2;
+const riverBottom = RIVER_Y + RIVER_HEIGHT / 2;
+
+/**
+ * If the unit needs to cross the river, return a bridge waypoint instead of
+ * heading straight for the target (which would walk through water).
+ */
+const getBridgeWaypoint = (unit: Unit, targetPos: Position): Position => {
+  const uy = unit.position.y;
+  const ty = targetPos.y;
+
+  const needsCross = (uy <= riverTop && ty >= riverBottom) ||
+                     (uy >= riverBottom && ty <= riverTop);
+
+  if (!needsCross) return targetPos;
+
+  // Choose nearest bridge
+  const leftDist  = Math.abs(unit.position.x - LEFT_BRIDGE_X);
+  const rightDist = Math.abs(unit.position.x - RIGHT_BRIDGE_X);
+  const bridgeX   = leftDist <= rightDist ? LEFT_BRIDGE_X : RIGHT_BRIDGE_X;
+
+  // Aim for the far edge of the bridge
+  const bridgeY = uy >= riverBottom ? riverTop - 5 : riverBottom + 5;
+
+  return { x: bridgeX, y: bridgeY };
+};
+
+const moveToward = (unit: Unit, target: Position, speed: number, dt: number) => {
+  const dx = target.x - unit.position.x;
+  const dy = target.y - unit.position.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1) return;
+  unit.position.x += (dx / len) * speed * dt;
+  unit.position.y += (dy / len) * speed * dt;
+};
+
+// ─── Targeting ───────────────────────────────────────────────────────────────
+
+/**
+ * Find the nearest enemy unit within aggroRange, or null.
+ */
+const findNearbyUnit = (state: GameState, unit: Unit, aggroRange: number): Unit | null => {
+  let closest: Unit | null = null;
+  let minD = aggroRange;
+  for (const u of state.units) {
+    if (u.faction !== unit.faction && u.hp > 0) {
+      const d = dist(unit.position, u.position);
+      if (d < minD) { minD = d; closest = u; }
     }
-  };
-
-  check(state.units);
-  check(state.towers);
-
+  }
   return closest;
+};
+
+/**
+ * Find the enemy tower this unit should march toward.
+ * Princess towers are targeted first; King Tower is locked until a princess falls.
+ * For building_target units, they head straight for a tower.
+ */
+const findTargetTower = (state: GameState, unit: Unit): Tower | null => {
+  const enemy: Faction = unit.faction === 'player' ? 'enemy' : 'player';
+  const enemyTowers = state.towers.filter(t => t.faction === enemy && t.hp > 0);
+
+  const princesses = enemyTowers.filter(t => t.type === 'princess');
+  if (princesses.length > 0) {
+    // Target the nearest princess tower
+    return princesses.reduce((a, b) =>
+      dist(unit.position, a.position) <= dist(unit.position, b.position) ? a : b
+    );
+  }
+
+  // All princesses dead → king tower is unlocked
+  return enemyTowers.find(t => t.type === 'king') ?? null;
 };
 
 const findTargetForTower = (state: GameState, tower: Tower): Unit | null => {
   let closest: Unit | null = null;
-  let minDist = tower.range;
-
+  let minD = tower.range;
   for (const u of state.units) {
     if (u.faction !== tower.faction && u.hp > 0) {
-      const d = distance(tower.position, u.position);
-      if (d <= minDist) {
-        minDist = d;
-        closest = u;
-      }
+      const d = dist(tower.position, u.position);
+      if (d <= minD) { minD = d; closest = u; }
     }
   }
   return closest;
 };
 
-const attack = (attacker: Unit, target: any, state: GameState) => {
-  if (attacker.special === 'conversion' && target.radius !== undefined && Math.random() < 0.4 && !target.isConverted) {
-    // Zemmour converts enemy units
-    target.faction = attacker.faction;
-    target.color = attacker.faction === 'player' ? '#3b82f6' : '#ef4444';
+// ─── Combat ──────────────────────────────────────────────────────────────────
+
+const attackUnit = (attacker: Unit, target: Unit, state: GameState) => {
+  if (attacker.special === 'conversion' && !target.isConverted && Math.random() < 0.4) {
+    target.faction     = attacker.faction;
+    target.color       = attacker.faction === 'player' ? '#3b82f6' : '#ef4444';
     target.isConverted = true;
-  } else if (attacker.special === 'aoe') {
-    // Mélenchon — AoE splash around the target
-    for (const u of state.units) {
-      if (u.faction !== attacker.faction && distance(attacker.position, u.position) <= attacker.range + 40) {
-        u.hp -= attacker.damage * 0.6;
-      }
-    }
-    target.hp -= attacker.damage;
-  } else if (attacker.special === 'splash_pets') {
-    // Bardot — pets deal splash
-    target.hp -= attacker.damage;
-    for (const u of state.units) {
-      if (u.faction !== attacker.faction && u.id !== target.id && distance(target.position, u.position) <= 30) {
-        u.hp -= attacker.damage * 0.5;
-      }
-    }
-  } else {
-    target.hp -= attacker.damage;
+    addFloatingText(state, 'Converti !', target.position, '#a78bfa');
+    return;
   }
+
+  if (attacker.special === 'aoe' || attacker.special === 'friendly_fire') {
+    const friendlyFire = attacker.special === 'friendly_fire';
+    for (const u of state.units) {
+      const isEnemy = u.faction !== attacker.faction;
+      if ((isEnemy || friendlyFire) && dist(attacker.position, u.position) <= attacker.range + 40) {
+        const dmg = isEnemy ? attacker.damage : Math.round(attacker.damage * 0.5);
+        u.hp -= dmg;
+        addFloatingText(state, `-${dmg}`, u.position, isEnemy ? '#f87171' : '#fb923c');
+      }
+    }
+    return;
+  }
+
+  if (attacker.special === 'splash_pets') {
+    target.hp -= attacker.damage;
+    addFloatingText(state, `-${attacker.damage}`, target.position, '#f87171');
+    for (const u of state.units) {
+      if (u.faction !== attacker.faction && u.id !== target.id &&
+          dist(target.position, u.position) <= 35) {
+        const splash = Math.round(attacker.damage * 0.5);
+        u.hp -= splash;
+        addFloatingText(state, `-${splash}`, u.position, '#fda4af');
+      }
+    }
+    return;
+  }
+
+  target.hp -= attacker.damage;
+  addFloatingText(state, `-${attacker.damage}`, target.position, '#f87171');
 };
+
+const attackTower = (attacker: Unit, tower: Tower, state: GameState) => {
+  if (attacker.special === 'friendly_fire') {
+    // JM Le Pen also clips nearby allies
+    for (const u of state.units) {
+      if (u.faction === attacker.faction && dist(attacker.position, u.position) < 60) {
+        const selfDmg = Math.round(attacker.damage * 0.3);
+        u.hp -= selfDmg;
+        addFloatingText(state, `-${selfDmg}`, u.position, '#fb923c');
+      }
+    }
+  }
+  tower.hp -= attacker.damage;
+  addFloatingText(state, `-${attacker.damage}`, tower.position, '#fbbf24');
+};
+
+// ─── Win Condition ────────────────────────────────────────────────────────────
 
 const checkWinCondition = (state: GameState) => {
   const pKing = state.towers.find(t => t.type === 'king' && t.faction === 'player');
   const eKing = state.towers.find(t => t.type === 'king' && t.faction === 'enemy');
 
-  if (!pKing || pKing.hp <= 0) {
-    state.status = 'gameover';
-    state.winner = 'enemy';
-    return;
-  }
-  if (!eKing || eKing.hp <= 0) {
-    state.status = 'gameover';
-    state.winner = 'player';
-    return;
-  }
+  if (!pKing || pKing.hp <= 0) { state.status = 'gameover'; state.winner = 'enemy'; return; }
+  if (!eKing || eKing.hp <= 0) { state.status = 'gameover'; state.winner = 'player'; return; }
 
   if (state.timeRemaining <= 0) {
-    const pTowers = state.towers.filter(t => t.faction === 'player' && t.hp > 0).length;
-    const eTowers = state.towers.filter(t => t.faction === 'enemy' && t.hp > 0).length;
+    const pAlive = state.towers.filter(t => t.faction === 'player' && t.hp > 0).length;
+    const eAlive = state.towers.filter(t => t.faction === 'enemy'  && t.hp > 0).length;
     state.status = 'gameover';
-    if (pTowers > eTowers) state.winner = 'player';
-    else if (eTowers > pTowers) state.winner = 'enemy';
-    else state.winner = 'draw';
+    if (pAlive > eAlive)      state.winner = 'player';
+    else if (eAlive > pAlive) state.winner = 'enemy';
+    else                       state.winner = 'draw';
   }
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const dist = (a: Position, b: Position) =>
+  Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+const addFloatingText = (
+  state: GameState,
+  text: string,
+  pos: Position,
+  color: string
+) => {
+  state.floatingTexts.push({
+    id: Math.random().toString(36).slice(2),
+    text,
+    x: pos.x + (Math.random() - 0.5) * 20,
+    y: pos.y - 10,
+    color,
+    createdAt: state.elapsedTime,
+  });
 };

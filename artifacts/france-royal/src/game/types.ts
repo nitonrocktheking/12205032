@@ -14,17 +14,19 @@ export interface Unit {
   maxHp: number;
   damage: number;
   speed: number;
+  baseSpeed: number;
+  speedMult: number; // 1 = normal, <1 = slowed
   range: number;
   attackSpeed: number;
   lastAttackTime: number;
   position: Position;
-  targetId?: string | null;
   label: string;
   color: string;
   radius: number;
   special?: string;
   isConverted?: boolean;
   imagePath?: string;
+  spawnTime: number; // seconds elapsed since game start — for time-based specials
 }
 
 export interface Tower {
@@ -38,6 +40,7 @@ export interface Tower {
   damage: number;
   attackSpeed: number;
   lastAttackTime: number;
+  isLocked?: boolean; // King tower locked until a princess falls
 }
 
 export interface CardDef {
@@ -62,6 +65,7 @@ export interface CardDef {
 
 export interface GameState {
   timeRemaining: number;
+  elapsedTime: number;
   status: 'playing' | 'gameover';
   winner?: Faction | 'draw';
   elixir: {
@@ -74,4 +78,14 @@ export interface GameState {
   hand: CardDef[];
   nextCard: CardDef | null;
   enemyNextSpawnTime: number;
+  floatingTexts: FloatingText[];
+}
+
+export interface FloatingText {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  createdAt: number;
 }
