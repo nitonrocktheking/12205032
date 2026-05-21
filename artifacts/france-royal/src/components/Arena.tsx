@@ -308,6 +308,7 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
           faction={unit.faction}
           isConverted={unit.isConverted ?? false}
           transformedAsInvoice={unit.transformedAsInvoice ?? false}
+          lastAttackTime={Number.isFinite(unit.lastAttackTime) ? unit.lastAttackTime : 0}
           displayX={displayX(unit.position.x)}
           displayY={displayY(unit.position.y)}
           localFaction={localFaction}
