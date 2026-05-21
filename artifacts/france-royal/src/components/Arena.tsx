@@ -292,6 +292,7 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
             key={tower.id}
             tower={tower}
             hp={tower.hp}
+            lastAttackTime={Number.isFinite(tower.lastAttackTime) ? tower.lastAttackTime : 0}
             displayX={displayX(tower.position.x)}
             displayY={displayY(tower.position.y)}
             localFaction={localFaction}
