@@ -1,11 +1,13 @@
-import { Link } from "wouter";
+import { useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { Show } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
 import CardTile from "../components/CardTile";
 import { getArenaForLevel, getNextArena } from "../game/arenas";
 import LogoutButton from "../components/LogoutButton";
-import { Swords, Globe2, Library, Layers, Coins, Trophy } from "lucide-react";
+import { SPLASH_SEEN_KEY } from "./Splash";
+import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle } from "lucide-react";
 
 function UserBar() {
   const { data: me } = useMe();
@@ -121,6 +123,12 @@ function DeckPreview() {
 }
 
 export default function Menu() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(SPLASH_SEEN_KEY)) setLocation("/splash");
+    } catch { /* ignore */ }
+  }, [setLocation]);
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-slate-50 relative overflow-hidden p-4">
       {/* Ambient background — three blobs and a subtle grid for depth */}
@@ -236,6 +244,16 @@ export default function Menu() {
                 </Button>
               </Link>
             </div>
+            <Link href="/splash">
+              <Button
+                variant="ghost"
+                className="w-full h-9 text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-200 hover:bg-slate-900/60"
+                data-testid="button-tutorial"
+              >
+                <HelpCircle className="w-3.5 h-3.5 mr-1.5" />
+                Revoir le tutoriel
+              </Button>
+            </Link>
           </div>
         </Show>
       </div>
