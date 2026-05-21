@@ -1,8 +1,7 @@
-import { Link } from "wouter";
 import { useMe } from "../hooks/useMe";
 import CardTile from "../components/CardTile";
 import { CARDS } from "../game/cards";
-import { Button } from "@/components/ui/button";
+import PageHeader from "../components/PageHeader";
 
 export default function Collection() {
   const { data: me, isLoading } = useMe();
@@ -12,17 +11,34 @@ export default function Collection() {
   }
 
   const owned = new Set(me.cards.map((c) => c.cardId));
+  const pct = Math.round((owned.size / me.allCards.length) * 100);
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-white p-4 pb-24">
-      <div className="max-w-md mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <Link href="/"><Button variant="ghost" className="text-slate-300">← Retour</Button></Link>
-          <h1 className="text-2xl font-black">COLLECTION</h1>
-          <div className="text-xs text-slate-400">{owned.size}/{me.allCards.length}</div>
+    <div className="min-h-screen w-full bg-slate-950 text-white pb-24 relative overflow-hidden">
+      <div className="absolute top-[-20%] left-[-20%] w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-96 h-96 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-md mx-auto px-4 space-y-4 relative">
+        <PageHeader
+          title="Collection"
+          subtitle={`${owned.size} sur ${me.allCards.length} personnalités`}
+        />
+
+        {/* Progress bar */}
+        <div className="bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-2xl p-3 shadow-[0_4px_0_rgba(0,0,0,0.4)]">
+          <div className="flex items-center justify-between mb-2 text-[10px] uppercase tracking-widest font-bold">
+            <span className="text-slate-400">Progression</span>
+            <span className="text-blue-300">{pct}%</span>
+          </div>
+          <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 via-fuchsia-500 to-rose-500 transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 border border-slate-700 shadow-[0_8px_0_rgba(0,0,0,0.4)]">
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur rounded-2xl p-4 border border-slate-700/80 shadow-[0_8px_0_rgba(0,0,0,0.4)]">
           <div className="grid grid-cols-4 gap-3 justify-items-center">
             {me.allCards.map((id) => (
               <div key={id} className="flex flex-col items-center gap-1">

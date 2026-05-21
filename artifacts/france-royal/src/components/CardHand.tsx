@@ -98,13 +98,13 @@ export default function CardHand({
         {selectedCard && <CardTooltip card={selectedCard} />}
       </AnimatePresence>
 
-      <div className="flex justify-between items-end gap-2">
+      <div className="flex justify-between items-end gap-1.5">
         {/* Next Card Preview */}
-        <div className="w-14 shrink-0 flex flex-col items-center gap-1">
-          <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Suivant</span>
+        <div className="shrink-0 flex flex-col items-center gap-1" style={{ width: "14%", minWidth: 44, maxWidth: 60 }}>
+          <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">Suivant</span>
           {nextCard && (
             <div
-              className="w-14 h-16 rounded-lg overflow-hidden border border-slate-600 relative"
+              className="w-full aspect-[7/8] rounded-lg overflow-hidden border border-slate-600 relative"
               style={{ background: `linear-gradient(to bottom, ${nextCard.color}99, ${nextCard.color})` }}
             >
               {nextCard.imagePath ? (
@@ -125,8 +125,8 @@ export default function CardHand({
           )}
         </div>
 
-        {/* Hand cards */}
-        <div className="flex flex-1 justify-center gap-2">
+        {/* Hand cards — flex with min-w-0 so they shrink on narrow screens */}
+        <div className="flex flex-1 min-w-0 justify-center items-end gap-1.5">
           {hand.map((card, idx) => {
             const canAfford = elixir >= card.cost;
             const isSelected = selected === idx;
@@ -134,7 +134,7 @@ export default function CardHand({
             return (
               <motion.div
                 key={`${idx}-${card.id}`}
-                className={`relative rounded-xl overflow-hidden cursor-pointer flex flex-col
+                className={`relative rounded-xl overflow-hidden cursor-pointer flex flex-col flex-1 min-w-0 aspect-[17/24]
                   ${isSelected
                     ? 'ring-2 ring-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.7)]'
                     : canAfford
@@ -143,8 +143,7 @@ export default function CardHand({
                   }
                 `}
                 style={{
-                  width: 68,
-                  height: 96,
+                  maxWidth: 72,
                   background: `linear-gradient(to bottom, ${card.color}dd, ${card.color})`,
                 }}
                 onClick={() => {

@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef } from "react";
-import { useLocation, Link } from "wouter";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMultiplayer, MPMessage } from "../hooks/useMultiplayer";
 import { Button } from "@/components/ui/button";
+import PageHeader from "../components/PageHeader";
 
 // ─── Connected session (mounted only when a mode is chosen) ──────────────────
 function LobbySession({
@@ -19,9 +20,13 @@ function LobbySession({
   const [errorMsg, setErrorMsg] = useState("");
   const seedRef = useRef(0);
   const codeRef = useRef("");
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const handleMessage = useCallback(
     (msg: MPMessage) => {
+      // Drop late messages that arrive after the user navigated away.
+      if (!mountedRef.current) return;
       if (msg.type === "room_created") {
         seedRef.current = msg.seed;
         codeRef.current = msg.code;
@@ -51,6 +56,7 @@ function LobbySession({
       else joinRoom(joinCode);
     },
     onClose: () => {
+      if (!mountedRef.current) return;
       setPhase("error");
       setErrorMsg("Connexion perdue. Veuillez réessayer.");
     },
@@ -98,25 +104,21 @@ export default function Lobby() {
   const [joinCode, setJoinCode] = useState("");
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white px-4 relative overflow-hidden">
-      <div className="absolute top-4 left-4 z-20">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-            ← Retour
-          </Button>
-        </Link>
-      </div>
+    <div className="min-h-screen w-full bg-slate-950 text-white relative overflow-hidden">
       <div className="absolute top-[-15%] left-[-15%] w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-15%] right-[-15%] w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-sm space-y-5 z-10">
-        <div className="text-center">
-          <div className="text-[10px] uppercase tracking-[0.4em] text-fuchsia-300 font-bold mb-1">Multijoueur</div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-red-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]">
+      <div className="max-w-sm mx-auto px-4 pb-24 relative">
+        <PageHeader title="Multijoueur" subtitle="1 vs 1" />
+
+        <div className="text-center mt-6 mb-5">
+          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-rose-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] tracking-tight">
             1 vs 1
           </h1>
           <p className="text-slate-500 text-xs mt-2 font-medium">Affrontez un ami avec un code à 4 lettres.</p>
         </div>
+
+        <div className="space-y-5">
 
         {/* Mode selection */}
         {mode === null && (
@@ -177,6 +179,7 @@ export default function Lobby() {
             onBack={() => setMode(null)}
           />
         )}
+        </div>
       </div>
     </div>
   );
