@@ -148,7 +148,12 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
       );
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Échec");
+      if (/401|Unauthorized/i.test(e?.message ?? "")) {
+        toast.error("Session admin expirée — reconnexion requise.");
+        onLogout();
+      } else {
+        toast.error(e?.message || "Échec");
+      }
     } finally {
       setBusy(false);
     }

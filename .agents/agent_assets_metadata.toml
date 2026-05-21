@@ -240,3 +240,9 @@ id = "EV3w3dxHHNcEud7uqdtEg"
 uri = "file://artifacts/france-royal/src/assets/politicians/ouvrier.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "cmkFCCETRXVs21Qz4JENw"
+uri = "file://artifacts/france-royal/src/assets/politicians/urssaf.png"
+type = "image"
+title = "urssaf inspector"

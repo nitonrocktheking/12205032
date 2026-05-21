@@ -40,6 +40,7 @@ import taxiImg from "../assets/politicians/taxi.png";
 import syndicatImg from "../assets/politicians/syndicat.png";
 import sncfImg from "../assets/politicians/sncf.png";
 import ouvrierImg from "../assets/politicians/ouvrier.png";
+import urssafImg from "../assets/politicians/urssaf.png";
 
 export const CARDS: Record<string, CardDef> = {
   zemmour: {
@@ -495,6 +496,16 @@ export const CARDS: Record<string, CardDef> = {
     cost: 3, color: "#a16207", label: "OUV", spawnCount: 1,
     baseHp: 700, baseDamage: 110, speed: 35, range: 28, attackSpeed: 1.3, radius: 14,
     special: "building_target", imagePath: ouvrierImg,
+  },
+
+  // ─── BOSS — admin-only, never unlocked through normal play ─────────────────
+  urssaf: {
+    id: 'urssaf', fullName: "L'URSSAF", name: "Le Contrôle",
+    powerName: "Avis de redressement",
+    powerDesc: "Transforme TOUTES les unités ennemies en factures non-payées. Les ennemis meurent lentement, leurs tours aussi. Vos tours deviennent invisibles. Dure jusqu'à la fin.",
+    cost: 9, color: "#7f1d1d", label: "URSSAF", spawnCount: 0,
+    baseHp: 0, baseDamage: 0, speed: 0, range: 0, attackSpeed: 0, radius: 0,
+    special: "urssaf", imagePath: urssafImg,
   },
 };
 

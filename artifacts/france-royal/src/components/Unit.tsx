@@ -12,12 +12,68 @@ interface Props {
   hp: number;
   faction: Faction;
   isConverted: boolean;
+  transformedAsInvoice: boolean;
   localFaction?: Faction;
 }
 
-function UnitComponent({ unit, displayX, displayY, hp, faction, isConverted, localFaction = "player" }: Props) {
+function UnitComponent({ unit, displayX, displayY, hp, faction, isConverted, transformedAsInvoice, localFaction = "player" }: Props) {
   const hpPct  = Math.max(0, (hp / unit.maxHp) * 100);
   const size   = unit.radius * 2;
+
+  // URSSAF transformation: render the unit as a crumpled unpaid invoice instead.
+  if (transformedAsInvoice) {
+    const paperSize = Math.max(22, size * 1.1);
+    return (
+      <motion.div
+        className="absolute z-20"
+        style={{
+          width: paperSize, height: paperSize * 1.25,
+          left: `${displayX}%`,
+          top:  `${displayY}%`,
+          marginLeft: -paperSize / 2,
+          marginTop:  -paperSize * 0.6,
+        }}
+        initial={false}
+        animate={{ left: `${displayX}%`, top: `${displayY}%` }}
+        transition={{ type: "tween", duration: 0.08, ease: "linear" }}
+      >
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded-full bg-black/55 blur-[2px] pointer-events-none"
+          style={{ bottom: 0, width: paperSize * 0.9, height: paperSize * 0.18 }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 h-1.5 bg-black/70 rounded-full overflow-hidden border border-black/40"
+          style={{ top: -4, width: Math.max(paperSize, 28) }}
+        >
+          <div className="h-full rounded-full bg-rose-400" style={{ width: `${hpPct}%` }} />
+        </div>
+        <div
+          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
+          style={{
+            bottom: paperSize * 0.05,
+            width: paperSize,
+            height: paperSize * 1.15,
+            transform: "translateX(-50%) rotate(-6deg)",
+            background: "linear-gradient(to bottom, #fef3c7 0%, #fde68a 50%, #fbbf24 100%)",
+            border: "2px solid #78350f",
+            boxShadow: "0 3px 4px rgba(0,0,0,0.5), inset 0 -2px 0 rgba(120,53,15,0.4)",
+            color: "#7f1d1d",
+            fontWeight: 900,
+            fontSize: Math.max(5, paperSize * 0.18),
+            lineHeight: 1,
+            textAlign: "center",
+            padding: 2,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: Math.max(4, paperSize * 0.13), opacity: 0.7 }}>URSSAF</div>
+            <div style={{ fontSize: Math.max(6, paperSize * 0.22), letterSpacing: -0.5 }}>NON</div>
+            <div style={{ fontSize: Math.max(6, paperSize * 0.22), letterSpacing: -0.5 }}>PAYÉE</div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   const isMine = faction === localFaction;
 
@@ -127,6 +183,7 @@ export default memo(UnitComponent, (prev, next) =>
   prev.hp === next.hp &&
   prev.faction === next.faction &&
   prev.isConverted === next.isConverted &&
+  prev.transformedAsInvoice === next.transformedAsInvoice &&
   prev.displayX === next.displayX &&
   prev.displayY === next.displayY &&
   prev.localFaction === next.localFaction

@@ -95,9 +95,10 @@ export const updateGame = (state: GameState, dt: number) => {
     state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * dt);
   }
 
-  // Solo AI (disabled in multiplayer)
+  // Solo AI (disabled in multiplayer).
+  // Boss/admin-only cards (URSSAF) are excluded so the AI never wastes elixir on a spell it can't use.
   if (!state.isMultiplayer && state.timeRemaining <= state.enemyNextSpawnTime) {
-    const allCards = Object.values(CARDS);
+    const allCards = Object.values(CARDS).filter(c => c.special !== 'urssaf' && c.spawnCount > 0);
     const weighted: CardDef[] = [];
     for (const c of allCards) {
       const w = c.cost <= 3 ? 3 : c.cost <= 5 ? 2 : 1;
@@ -120,6 +121,8 @@ export const updateGame = (state: GameState, dt: number) => {
   // Unit updates
   for (const unit of state.units) {
     if (unit.hp <= 0) continue;
+    // Transformed invoices don't act — they just wait to die.
+    if (unit.transformedAsInvoice) continue;
 
     // Passives
     if (unit.special === 'heal_boost') {
@@ -181,6 +184,26 @@ export const updateGame = (state: GameState, dt: number) => {
     }
   }
 
+  // ── URSSAF global effect: transform opponent units into invoices and DOT them + their towers.
+  if (state.urssafEffect) {
+    const caster = state.urssafEffect.casterFaction;
+    const INVOICE_UNIT_DOT  = 40; // dmg per second to enemy units
+    const INVOICE_TOWER_DOT = 18; // dmg per second to enemy towers
+    for (const u of state.units) {
+      if (u.faction !== caster && u.hp > 0) {
+        u.transformedAsInvoice = true;
+        u.speedMult = 0;
+        u.damage = 0;
+        u.hp -= INVOICE_UNIT_DOT * dt;
+      }
+    }
+    for (const t of state.towers) {
+      if (t.faction !== caster && t.hp > 0) {
+        t.hp -= INVOICE_TOWER_DOT * dt;
+      }
+    }
+  }
+
   state.units = state.units.filter(u => u.hp > 0);
   state.floatingTexts = state.floatingTexts.filter(ft => state.elapsedTime - ft.createdAt < 1.2);
 
@@ -191,6 +214,17 @@ export const updateGame = (state: GameState, dt: number) => {
 export const playCard = (state: GameState, cardIndex: number, pos: Position): boolean => {
   const card = state.hand[cardIndex];
   if (!card || state.elixir.player < card.cost) return false;
+
+  // URSSAF: spell — global effect, no unit spawned.
+  if (card.id === 'urssaf') {
+    if (state.urssafEffect) return false;
+    state.elixir.player -= card.cost;
+    state.urssafEffect = { casterFaction: 'player', startTime: state.elapsedTime };
+    addFloat(state, 'AVIS DE REDRESSEMENT !', { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT / 2 }, '#fbbf24');
+    drawNextCard(state, cardIndex, 'player');
+    return true;
+  }
+
   state.elixir.player -= card.cost;
 
   const spawnPos: Position = {
@@ -212,6 +246,17 @@ export const playCard = (state: GameState, cardIndex: number, pos: Position): bo
 export const playEnemyCard = (state: GameState, cardIndex: number, pos: Position): boolean => {
   const card = state.enemyHand[cardIndex];
   if (!card || state.elixir.enemy < card.cost) return false;
+
+  // URSSAF: spell — global effect, no unit spawned.
+  if (card.id === 'urssaf') {
+    if (state.urssafEffect) return false;
+    state.elixir.enemy -= card.cost;
+    state.urssafEffect = { casterFaction: 'enemy', startTime: state.elapsedTime };
+    addFloat(state, 'AVIS DE REDRESSEMENT !', { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT / 2 }, '#fbbf24');
+    drawNextCard(state, cardIndex, 'enemy');
+    return true;
+  }
+
   state.elixir.enemy -= card.cost;
 
   const spawnPos: Position = {

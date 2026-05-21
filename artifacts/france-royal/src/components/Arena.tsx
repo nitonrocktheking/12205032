@@ -280,17 +280,24 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         }}
       />
 
-      {/* Towers */}
-      {state.towers.map(tower => (
-        <TowerComponent
-          key={tower.id}
-          tower={tower}
-          hp={tower.hp}
-          displayX={displayX(tower.position.x)}
-          displayY={displayY(tower.position.y)}
-          localFaction={localFaction}
-        />
-      ))}
+      {/* Towers — URSSAF effect hides the caster's towers from the opponent's viewpoint */}
+      {state.towers.map(tower => {
+        if (
+          state.urssafEffect &&
+          tower.faction === state.urssafEffect.casterFaction &&
+          localFaction !== state.urssafEffect.casterFaction
+        ) return null;
+        return (
+          <TowerComponent
+            key={tower.id}
+            tower={tower}
+            hp={tower.hp}
+            displayX={displayX(tower.position.x)}
+            displayY={displayY(tower.position.y)}
+            localFaction={localFaction}
+          />
+        );
+      })}
 
       {/* Units */}
       {state.units.map(unit => (
@@ -300,11 +307,23 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
           hp={unit.hp}
           faction={unit.faction}
           isConverted={unit.isConverted ?? false}
+          transformedAsInvoice={unit.transformedAsInvoice ?? false}
           displayX={displayX(unit.position.x)}
           displayY={displayY(unit.position.y)}
           localFaction={localFaction}
         />
       ))}
+
+      {/* URSSAF aura overlay when effect is active */}
+      {state.urssafEffect && (
+        <div
+          className="absolute inset-0 pointer-events-none z-[35]"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(245,158,11,0.10) 0%, rgba(127,29,29,0.18) 70%, rgba(0,0,0,0.30) 100%)",
+            mixBlendMode: "multiply",
+          }}
+        />
+      )}
 
       {/* Floating damage texts */}
       {state.floatingTexts.map(ft => (

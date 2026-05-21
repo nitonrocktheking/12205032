@@ -21,8 +21,8 @@ A Clash Royale-style browser arena game where French political personalities bat
 ## Where things live
 
 - Game engine — `artifacts/france-royal/src/game/engine.ts` (deterministic, seeded for MP)
-- Card defs — `artifacts/france-royal/src/game/cards.ts` (14 cards)
-- Backend card catalog (IDs only) — `artifacts/api-server/src/lib/cardsCatalog.ts`
+- Card defs — `artifacts/france-royal/src/game/cards.ts`
+- Backend card catalog (IDs only) — `artifacts/api-server/src/lib/cardsCatalog.ts` (`ALL_CARDS`, `STARTER_CARDS`, `ADMIN_ONLY_CARDS`, `UNLOCKABLE_CARDS = ALL − STARTER − ADMIN_ONLY`)
 - WebSocket rooms (MP relay) — `artifacts/api-server/src/ws/rooms.ts`
 - DB schemas — `lib/db/src/schema/{userProfiles,userCards,userDecks}.ts`
 - Auth + API routes — `artifacts/api-server/src/{app.ts,routes/me.ts}`
@@ -52,6 +52,20 @@ A Clash Royale-style browser arena game where French political personalities bat
 - App language: French.
 - Both email/password AND Google login required (Clerk handles both natively).
 - Pseudo-3D style via CSS, not Three.js.
+
+## Admin panel
+
+- Page `/admin` (Clerk-bypassed, password-gated only) — see `pages/Admin.tsx`. Default creds `admin` / `pouletos`; override via `ADMIN_PASSWORD` (and optional `ADMIN_USERNAME`) env. A startup warning is logged if `ADMIN_PASSWORD` is unset.
+- Endpoints: `POST /api/admin/login`, `GET /api/admin/users`, `POST /api/admin/grant-card` (`target`: userId or `"all"`, `cardId`). All require `x-admin-password` header (except `login`). Single-target grant validates the user exists.
+- Boss/admin-only cards: declared in `ADMIN_ONLY_CARDS`. Currently `urssaf` only.
+
+## URSSAF (boss spell)
+
+- `urssaf` is a global spell, cost 9, `spawnCount: 0`, `special: 'urssaf'`. Never appears in random unlocks.
+- On play: sets `state.urssafEffect = { casterFaction, startTime }`, no unit spawn, replay while active returns `false`.
+- Per tick: opponent units → `transformedAsInvoice=true`, `speedMult=0`, `damage=0`, 40 dps DOT. Opponent towers take 18 dps. Caster's side untouched.
+- Rendering: `Arena.tsx` hides the caster's towers from the opponent's viewport. `Unit.tsx` early-returns an "URSSAF NON PAYÉE" paper visual for transformed units (memo comparator includes `transformedAsInvoice`).
+- Solo AI pool filters out `special === 'urssaf'` and `spawnCount === 0` so the AI never wastes elixir on a spell it can't cast via `spawnUnit`.
 
 ## Gotchas
 

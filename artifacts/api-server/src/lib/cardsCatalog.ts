@@ -13,6 +13,8 @@ export const ALL_CARDS = [
   // Groupes / corps de métier
   "crs", "agriculteur", "pompier", "journaliste", "lyceen", "taxi",
   "syndicat", "sncf", "ouvrier",
+  // Admin-only boss cards (never randomly unlocked)
+  "urssaf",
 ] as const;
 
 export const STARTER_CARDS = [
@@ -20,8 +22,13 @@ export const STARTER_CARDS = [
   "gilets", "taxe", "piaf",
 ] as const;
 
+// Cards that can never be unlocked by normal play (boss / admin-only).
+export const ADMIN_ONLY_CARDS = ["urssaf"] as const;
+
 export const UNLOCKABLE_CARDS = ALL_CARDS.filter(
-  (c) => !(STARTER_CARDS as readonly string[]).includes(c),
+  (c) =>
+    !(STARTER_CARDS as readonly string[]).includes(c) &&
+    !(ADMIN_ONLY_CARDS as readonly string[]).includes(c),
 );
 
 export type CardId = (typeof ALL_CARDS)[number];

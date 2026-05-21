@@ -27,6 +27,8 @@ export interface Unit {
   isConverted?: boolean;
   imagePath?: string;
   spawnTime: number;
+  // URSSAF boss spell: when set, unit has been transformed into an unpaid invoice.
+  transformedAsInvoice?: boolean;
 }
 
 export interface Tower {
@@ -84,6 +86,11 @@ export interface GameState {
   enemyNextCard: CardDef | null;
   enemyNextSpawnTime: number;
   floatingTexts: FloatingText[];
+  // URSSAF boss effect: global, lasts until game ends. The caster's units/towers
+  // are protected; the opponent's units are transformed into invoices and slowly
+  // die, opponent towers take DOT, and the caster's own towers become invisible
+  // from the opponent's viewpoint.
+  urssafEffect?: { casterFaction: Faction; startTime: number } | null;
 }
 
 export interface FloatingText {

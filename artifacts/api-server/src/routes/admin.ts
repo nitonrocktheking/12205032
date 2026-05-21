@@ -2,9 +2,17 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { eq } from "drizzle-orm";
 import { db, userProfilesTable, userCardsTable } from "@workspace/db";
 import { ALL_CARDS, isValidCardId } from "../lib/cardsCatalog";
+import { logger } from "../lib/logger";
 
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "pouletos";
 const ADMIN_USERNAME = process.env["ADMIN_USERNAME"] ?? "admin";
+
+if (!process.env["ADMIN_PASSWORD"]) {
+  logger.warn(
+    "ADMIN_PASSWORD env var not set — falling back to the default password. " +
+    "Set ADMIN_PASSWORD in production to override.",
+  );
+}
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const pwd = req.header("x-admin-password");
@@ -66,6 +74,16 @@ router.post("/admin/grant-card", requireAdmin, async (req, res) => {
     const all = await db.select({ id: userProfilesTable.clerkUserId }).from(userProfilesTable);
     targetIds = all.map((r) => r.id);
   } else {
+    // Validate the target user actually exists to avoid orphan card rows.
+    const found = await db
+      .select({ id: userProfilesTable.clerkUserId })
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkUserId, target))
+      .limit(1);
+    if (found.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
     targetIds = [target];
   }
 
