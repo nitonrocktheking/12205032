@@ -1,19 +1,25 @@
 import { motion } from "framer-motion";
+import { memo } from "react";
 import { Faction, Unit } from "../game/types";
 
 interface Props {
   unit: Unit;
   displayX: number;
   displayY: number;
+  // Primitive snapshots so React.memo can detect changes
+  // (engine mutates unit objects in place; passing primitives gives us
+  // distinct prev/next values at render time).
+  hp: number;
+  faction: Faction;
+  isConverted: boolean;
   localFaction?: Faction;
 }
 
-export default function UnitComponent({ unit, displayX, displayY, localFaction = "player" }: Props) {
-  const hpPct  = Math.max(0, (unit.hp / unit.maxHp) * 100);
+function UnitComponent({ unit, displayX, displayY, hp, faction, isConverted, localFaction = "player" }: Props) {
+  const hpPct  = Math.max(0, (hp / unit.maxHp) * 100);
   const size   = unit.radius * 2;
 
-  const isMine = unit.faction === localFaction;
-  const isConverted = unit.isConverted;
+  const isMine = faction === localFaction;
 
   // Color palette
   const ringTop    = isConverted ? "#c4b5fd" : isMine ? "#93c5fd" : "#fca5a5";
@@ -116,3 +122,12 @@ export default function UnitComponent({ unit, displayX, displayY, localFaction =
     </motion.div>
   );
 }
+
+export default memo(UnitComponent, (prev, next) =>
+  prev.hp === next.hp &&
+  prev.faction === next.faction &&
+  prev.isConverted === next.isConverted &&
+  prev.displayX === next.displayX &&
+  prev.displayY === next.displayY &&
+  prev.localFaction === next.localFaction
+);

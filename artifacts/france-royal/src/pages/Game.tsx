@@ -39,6 +39,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }:
         } else {
           playCard(gameStateRef.current, msg.cardIndex, { x: msg.x, y: msg.y });
         }
+        // Force immediate re-render so the opponent's unit appears without waiting for the next tick.
+        syncRender();
       } else if (msg.type === "opponent_left") {
         setOpponentLeft(true);
       } else if (msg.type === "error" && isMultiplayer) {
@@ -89,7 +91,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }:
         const pCrowns = towers.filter(t => t.faction === (localFaction === "player" ? "enemy" : "player") && t.hp <= 0).length;
         const eCrowns = towers.filter(t => t.faction === localFaction && t.hp <= 0).length;
         setTimeout(() => {
-          setLocation(`/results?winner=${localWinner}&pCrowns=${pCrowns}&eCrowns=${eCrowns}`);
+          const mpFlag = isMultiplayer ? "&mp=1" : "";
+          setLocation(`/results?winner=${localWinner}&pCrowns=${pCrowns}&eCrowns=${eCrowns}${mpFlag}`);
         }, 1000);
         return;
       }
@@ -122,10 +125,10 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }:
     }
   };
 
-  const syncRender = () => {
+  function syncRender() {
     const s = gameStateRef.current;
     setRenderState({ ...s, units: [...s.units], towers: [...s.towers], hand: [...s.hand], enemyHand: [...s.enemyHand], floatingTexts: [...s.floatingTexts] });
-  };
+  }
 
   // Choose which hand / elixir to show
   const displayHand    = localFaction === "player" ? renderState.hand    : renderState.enemyHand;

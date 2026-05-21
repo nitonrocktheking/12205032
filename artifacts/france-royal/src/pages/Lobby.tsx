@@ -98,38 +98,38 @@ export default function Lobby() {
   const [joinCode, setJoinCode] = useState("");
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-900 text-white px-4 relative overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white px-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 z-20">
         <Link href="/">
           <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-            Retour
+            ← Retour
           </Button>
         </Link>
       </div>
-      <div className="absolute top-[-10%] left-[-10%] w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-80 h-80 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[-15%] left-[-15%] w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-15%] right-[-15%] w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-sm space-y-6 z-10">
+      <div className="w-full max-w-sm space-y-5 z-10">
         <div className="text-center">
-          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-red-400">
-            FRANCE ROYAL
+          <div className="text-[10px] uppercase tracking-[0.4em] text-fuchsia-300 font-bold mb-1">Multijoueur</div>
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-red-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]">
+            1 vs 1
           </h1>
-          <p className="text-slate-400 text-sm mt-1 font-medium">Multijoueur — 1 vs 1</p>
+          <p className="text-slate-500 text-xs mt-2 font-medium">Affrontez un ami avec un code à 4 lettres.</p>
         </div>
 
         {/* Mode selection */}
         {mode === null && (
           <div className="space-y-3">
             <Button
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 font-bold text-lg"
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]"
               data-testid="button-create-room"
               onClick={() => setMode("create")}
             >
               Créer une salle
             </Button>
             <Button
-              variant="outline"
-              className="w-full h-12 border-slate-600 text-white hover:bg-slate-800 font-bold text-lg"
+              className="w-full h-14 bg-fuchsia-600 hover:bg-fuchsia-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]"
               data-testid="button-join-room"
               onClick={() => setMode({ type: "join_input" })}
             >

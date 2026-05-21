@@ -1,17 +1,21 @@
+import { memo } from "react";
 import { Faction, Tower } from "../game/types";
 
 interface Props {
   tower: Tower;
   displayX: number;
   displayY: number;
+  // Primitive snapshot so React.memo can detect HP changes
+  // (engine mutates tower objects in place).
+  hp: number;
   localFaction?: Faction;
 }
 
-export default function TowerComponent({ tower, displayX, displayY, localFaction = "player" }: Props) {
+function TowerComponent({ tower, displayX, displayY, hp, localFaction = "player" }: Props) {
   const isKing = tower.type === "king";
   const size   = isKing ? 56 : 42;
-  const hpPct  = Math.max(0, (tower.hp / tower.maxHp) * 100);
-  const isDead = tower.hp <= 0;
+  const hpPct  = Math.max(0, (hp / tower.maxHp) * 100);
+  const isDead = hp <= 0;
 
   const isMine = tower.faction === localFaction;
 
@@ -157,3 +161,10 @@ export default function TowerComponent({ tower, displayX, displayY, localFaction
     </div>
   );
 }
+
+export default memo(TowerComponent, (prev, next) =>
+  prev.hp === next.hp &&
+  prev.displayX === next.displayX &&
+  prev.displayY === next.displayY &&
+  prev.localFaction === next.localFaction
+);

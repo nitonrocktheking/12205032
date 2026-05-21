@@ -11,7 +11,7 @@ export const LEFT_BRIDGE_X = 100;
 export const RIGHT_BRIDGE_X = 300;
 
 export const TICK_RATE = 1000 / 60;
-export const RENDER_RATE = 80; // ms
+export const RENDER_RATE = 50; // ms — ~20 renders/sec for smooth motion
 
 export const MAX_ELIXIR = 10;
 export const ELIXIR_RATE = 1; // per second

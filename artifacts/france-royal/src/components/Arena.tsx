@@ -285,6 +285,7 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         <TowerComponent
           key={tower.id}
           tower={tower}
+          hp={tower.hp}
           displayX={displayX(tower.position.x)}
           displayY={displayY(tower.position.y)}
           localFaction={localFaction}
@@ -296,6 +297,9 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         <UnitComponent
           key={unit.id}
           unit={unit}
+          hp={unit.hp}
+          faction={unit.faction}
+          isConverted={unit.isConverted ?? false}
           displayX={displayX(unit.position.x)}
           displayY={displayY(unit.position.y)}
           localFaction={localFaction}
