@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "France Royal"
+version = "1.0.0"
+id = "artifacts/france-royal"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22336
+
+[services.development]
+run = "pnpm --filter @workspace/france-royal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/france-royal", "run", "build" ]
+publicDir = "artifacts/france-royal/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22336"
+BASE_PATH = "/"
