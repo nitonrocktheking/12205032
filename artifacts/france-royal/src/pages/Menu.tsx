@@ -3,6 +3,7 @@ import { Show, useClerk } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
 import CardTile from "../components/CardTile";
+import { getArenaForLevel, getNextArena } from "../game/arenas";
 
 function UserBar() {
   const { data: me } = useMe();
@@ -33,6 +34,33 @@ function UserBar() {
           Sortir
         </button>
       </div>
+    </div>
+  );
+}
+
+function ArenaBadge() {
+  const { data: me } = useMe();
+  if (!me) return null;
+  const arena = getArenaForLevel(me.profile.level);
+  const next = getNextArena(me.profile.level);
+  return (
+    <div
+      className="rounded-xl px-3 py-2 border border-slate-700 shadow-[0_4px_0_rgba(0,0,0,0.4)] flex items-center justify-between"
+      style={{ background: `linear-gradient(135deg, ${arena.grassTop}, ${arena.grassBottom})` }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-2xl drop-shadow">{arena.emoji}</span>
+        <div className="text-left">
+          <div className="text-[10px] uppercase tracking-widest text-white/60 font-bold">Arène</div>
+          <div className="text-sm font-black text-white drop-shadow">{arena.name}</div>
+        </div>
+      </div>
+      {next && (
+        <div className="text-right text-[10px] text-white/70 font-bold">
+          <div>Prochaine</div>
+          <div>{next.emoji} Niv. {next.minLevel}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -95,6 +123,7 @@ export default function Menu() {
 
         <Show when="signed-in">
           <UserBar />
+          <ArenaBadge />
           <DeckPreview />
 
           <div className="space-y-2">

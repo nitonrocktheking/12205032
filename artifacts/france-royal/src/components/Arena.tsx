@@ -4,6 +4,7 @@ import {
   RIVER_Y, RIVER_HEIGHT,
   LEFT_BRIDGE_X, RIGHT_BRIDGE_X, BRIDGE_WIDTH,
 } from "../game/constants";
+import { ArenaTheme, ARENAS } from "../game/arenas";
 import TowerComponent from "./Tower";
 import UnitComponent from "./Unit";
 
@@ -31,9 +32,10 @@ interface Props {
   onClick: (x: number, y: number) => void;
   flipped?: boolean;
   localFaction?: Faction;
+  arena?: ArenaTheme;
 }
 
-export default function Arena({ state, onClick, flipped = false, localFaction = "player" }: Props) {
+export default function Arena({ state, onClick, flipped = false, localFaction = "player", arena = ARENAS[0] }: Props) {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = ((e.clientX - rect.left) / rect.width)  * ARENA_WIDTH;
@@ -71,19 +73,26 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
   return (
     <div
       className="w-full h-full relative cursor-crosshair overflow-hidden touch-none select-none"
-      style={{ background: "linear-gradient(to bottom, #14532d 50%, #15803d 100%)" }}
+      style={{ background: `linear-gradient(to bottom, ${arena.grassTop} 50%, ${arena.grassBottom} 100%)` }}
       onClick={handleClick}
       data-testid="arena"
+      data-arena={arena.id}
     >
       {/* Grass grid */}
       <div
-        className="absolute inset-0 opacity-10"
+        className="absolute inset-0"
         style={{
+          opacity: arena.gridOpacity,
           backgroundImage:
             "repeating-linear-gradient(0deg,transparent,transparent 39px,#000 39px,#000 40px)," +
             "repeating-linear-gradient(90deg,transparent,transparent 39px,#000 39px,#000 40px)",
         }}
       />
+
+      {/* Arena name watermark */}
+      <div className="absolute top-2 right-2 z-10 pointer-events-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-white/30">
+        <span>{arena.emoji}</span><span>{arena.name}</span>
+      </div>
 
       {/* Center divider */}
       <div className="absolute w-full border-t border-dashed border-white/10" style={{ top: "50%" }} />
@@ -94,9 +103,9 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         style={{
           top: `${riverTopPct}%`,
           height: `${riverHeightPct}%`,
-          background: "linear-gradient(to bottom, #1e40af88, #3b82f688)",
-          borderTop: "2px solid rgba(147,197,253,0.4)",
-          borderBottom: "2px solid rgba(147,197,253,0.4)",
+          background: `linear-gradient(to bottom, ${arena.riverTop}, ${arena.riverBottom})`,
+          borderTop: `2px solid ${arena.riverBorder}`,
+          borderBottom: `2px solid ${arena.riverBorder}`,
         }}
       />
 
@@ -108,9 +117,9 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: "#92400e",
-          borderLeft: "2px solid #a16207",
-          borderRight: "2px solid #a16207",
+          background: arena.bridgeColor,
+          borderLeft: `2px solid ${arena.bridgeBorder}`,
+          borderRight: `2px solid ${arena.bridgeBorder}`,
           zIndex: 5,
         }}
       />
@@ -122,9 +131,9 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
           width: `${(BRIDGE_WIDTH / ARENA_WIDTH) * 100}%`,
           top: `${bridgeTopPct}%`,
           height: `${bridgeHeightPct}%`,
-          background: "#92400e",
-          borderLeft: "2px solid #a16207",
-          borderRight: "2px solid #a16207",
+          background: arena.bridgeColor,
+          borderLeft: `2px solid ${arena.bridgeBorder}`,
+          borderRight: `2px solid ${arena.bridgeBorder}`,
           zIndex: 5,
         }}
       />

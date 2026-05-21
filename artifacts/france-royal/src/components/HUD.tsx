@@ -1,7 +1,8 @@
 import { Faction, GameState } from "../game/types";
 import { MAX_ELIXIR } from "../game/constants";
+import { ArenaTheme } from "../game/arenas";
 
-export default function HUD({ state, localFaction = "player" }: { state: GameState; localFaction?: Faction }) {
+export default function HUD({ state, localFaction = "player", arena }: { state: GameState; localFaction?: Faction; arena?: ArenaTheme }) {
   // Crowns = enemy towers destroyed (towers belonging to the opposing faction)
   const myCrowns  = state.towers.filter(t => t.faction !== localFaction && t.hp <= 0).length;
   const oppCrowns = state.towers.filter(t => t.faction === localFaction  && t.hp <= 0).length;
@@ -15,6 +16,11 @@ export default function HUD({ state, localFaction = "player" }: { state: GameSta
 
   return (
     <div className="bg-slate-900/90 backdrop-blur border-b border-slate-800 p-3 z-50">
+      {arena && (
+        <div className="text-center text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-2 flex items-center justify-center gap-1">
+          <span>{arena.emoji}</span><span>{arena.name}</span>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-2">
         {/* My crowns */}
         <div className="flex items-center gap-2">

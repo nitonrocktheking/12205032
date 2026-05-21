@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Faction, GameState } from "../game/types";
 import { createInitialState, updateGame, playCard, playEnemyCard } from "../game/engine";
 import { RENDER_RATE, ARENA_HEIGHT } from "../game/constants";
+import { ArenaTheme, ARENAS, getArenaForLevel } from "../game/arenas";
 import Arena from "../components/Arena";
 import HUD from "../components/HUD";
 import CardHand from "../components/CardHand";
@@ -19,7 +20,7 @@ function parseParams() {
   return { seed, isMultiplayer, localFaction };
 }
 
-function GameInner({ seed, isMultiplayer, localFaction, deck }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[] }) {
+function GameInner({ seed, isMultiplayer, localFaction, deck, arena }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme }) {
   const [, setLocation] = useLocation();
   const gameStateRef = useRef<GameState>(createInitialState(seed, deck));
   const [renderState, setRenderState] = useState<GameState>(() => ({ ...gameStateRef.current }));
@@ -141,9 +142,9 @@ function GameInner({ seed, isMultiplayer, localFaction, deck }: { seed?: number;
         </div>
       )}
 
-      <HUD state={renderState} localFaction={localFaction} />
+      <HUD state={renderState} localFaction={localFaction} arena={arena} />
       <div className="flex-1 relative min-h-0">
-        <Arena state={renderState} onClick={handleArenaClick} flipped={flipped} localFaction={localFaction} />
+        <Arena state={renderState} onClick={handleArenaClick} flipped={flipped} localFaction={localFaction} arena={arena} />
       </div>
       <CardHand
         hand={displayHand}
@@ -168,6 +169,7 @@ export default function Game() {
 
   const deck = isMultiplayer ? undefined : getSelectedDeck(me);
   const finalDeck = deck && deck.length === 8 ? deck : undefined;
+  const arena = getArenaForLevel(me?.profile.level ?? 1) ?? ARENAS[0];
 
-  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} />;
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} />;
 }
