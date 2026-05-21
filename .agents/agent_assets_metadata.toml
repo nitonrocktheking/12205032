@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Xiyzxt7ZQJ_9vI-b61Djx"
+uri = "file://artifacts/france-royal/src/assets/politicians/zemmour.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "hkSnB8D7QO43ac2Pg18R1"
+uri = "file://artifacts/france-royal/src/assets/politicians/marine.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "lx1WJxKdOZ7viD2sK_qP5"
+uri = "file://artifacts/france-royal/src/assets/politicians/melenchon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xRJX5urSnQ09EtZmy7Zhj"
+uri = "file://artifacts/france-royal/src/assets/politicians/macron.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JreV-SJ4Zd-WNCm2bJ_hX"
+uri = "file://artifacts/france-royal/src/assets/politicians/bardella.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "BbbL14Y1Jntw6f9TN-wNK"
+uri = "file://artifacts/france-royal/src/assets/politicians/piaf.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "RYKDizkddbKupBlBZggH5"
+uri = "file://artifacts/france-royal/src/assets/politicians/bardot.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "yIl1VnXkTdEN8ogCsY3Bq"
+uri = "file://artifacts/france-royal/src/assets/politicians/sarkozy.png"
+type = "image"
+title = "generated_image"

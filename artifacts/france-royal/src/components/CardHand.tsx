@@ -1,5 +1,4 @@
 import { CardDef } from "../game/types";
-import { MAX_ELIXIR } from "../game/constants";
 import { motion } from "framer-motion";
 
 export default function CardHand({ 
@@ -16,19 +15,29 @@ export default function CardHand({
   onSelect: (idx: number) => void
 }) {
   return (
-    <div className="bg-slate-900 border-t border-slate-800 p-2 pb-safe">
-      <div className="flex justify-between items-end gap-2 px-1">
+    <div className="bg-slate-900 border-t border-slate-700 px-2 pt-2 pb-3">
+      <div className="flex justify-between items-end gap-2">
         {/* Next Card Preview */}
-        <div className="w-12 h-16 bg-slate-800 rounded flex flex-col items-center justify-center border border-slate-700 opacity-70 shrink-0">
-          <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">SUIVANT</span>
+        <div className="w-14 shrink-0 flex flex-col items-center gap-1">
+          <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Suivant</span>
           {nextCard && (
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-slate-600" style={{ backgroundColor: nextCard.color }}>
-              {nextCard.label}
+            <div 
+              className="w-14 h-16 rounded-lg overflow-hidden border border-slate-600 relative flex items-end justify-center"
+              style={{ background: `linear-gradient(to bottom, ${nextCard.color}99, ${nextCard.color})` }}
+            >
+              {nextCard.imagePath ? (
+                <img src={nextCard.imagePath} alt={nextCard.fullName} className="absolute inset-0 w-full h-full object-cover object-top opacity-80" />
+              ) : (
+                <span className="text-xs font-bold text-white z-10">{nextCard.label}</span>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-0.5 z-10">
+                <span className="text-[8px] text-white font-bold">{nextCard.label}</span>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Hand */}
+        {/* Hand cards */}
         <div className="flex flex-1 justify-center gap-2">
           {hand.map((card, idx) => {
             const canAfford = elixir >= card.cost;
@@ -37,27 +46,51 @@ export default function CardHand({
             return (
               <motion.div
                 key={`${idx}-${card.id}`}
-                className={`relative w-20 h-28 rounded-lg border-2 flex flex-col items-center pt-2 transition-colors cursor-pointer
-                  ${isSelected ? 'border-blue-400 bg-blue-900/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 
-                    canAfford ? 'border-slate-600 bg-slate-800 hover:border-slate-500' : 'border-slate-800 bg-slate-900 opacity-50 grayscale'}
+                className={`relative rounded-xl overflow-hidden cursor-pointer flex flex-col
+                  ${isSelected 
+                    ? 'ring-2 ring-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.6)]' 
+                    : canAfford 
+                      ? 'ring-1 ring-slate-600 hover:ring-slate-400' 
+                      : 'ring-1 ring-slate-800 opacity-50 grayscale'
+                  }
                 `}
+                style={{ width: 68, height: 96, background: `linear-gradient(to bottom, ${card.color}dd, ${card.color})` }}
                 onClick={() => canAfford && onSelect(idx)}
                 data-testid={`card-${card.id}`}
-                animate={{ y: isSelected ? -10 : 0 }}
+                animate={{ y: isSelected ? -12 : 0, scale: isSelected ? 1.05 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               >
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-slate-600 shadow-inner mb-2"
-                  style={{ backgroundColor: card.color }}
-                >
-                  {card.label}
+                {/* Elixir cost diamond */}
+                <div className="absolute top-1 right-1 z-20 w-5 h-5 rotate-45 bg-fuchsia-600 border border-fuchsia-400 flex items-center justify-center shadow">
+                  <span className="-rotate-45 text-white font-black text-[10px]">{card.cost}</span>
                 </div>
-                
-                <span className="text-[10px] font-bold text-slate-300 text-center leading-tight px-1 uppercase line-clamp-2">
-                  {card.name}
-                </span>
 
-                <div className="absolute -top-3 -left-3 w-6 h-6 rotate-45 bg-fuchsia-600 flex items-center justify-center shadow-md">
-                  <span className="-rotate-45 text-white font-bold text-xs">{card.cost}</span>
+                {/* Portrait image */}
+                <div className="flex-1 relative overflow-hidden">
+                  {card.imagePath ? (
+                    <img 
+                      src={card.imagePath} 
+                      alt={card.fullName}
+                      className="absolute inset-0 w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xl font-black text-white/80">{card.label}</span>
+                    </div>
+                  )}
+                  {/* Dark gradient overlay at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent" />
+                </div>
+
+                {/* Card info footer */}
+                <div className="bg-black/70 px-1 py-0.5 text-center">
+                  <div className="text-[9px] font-black text-white leading-tight truncate">{card.fullName}</div>
+                  <div 
+                    className="text-[8px] font-bold leading-tight truncate mt-0.5"
+                    style={{ color: card.color === '#1e293b' ? '#94a3b8' : `${card.color}dd` }}
+                  >
+                    {card.powerName}
+                  </div>
                 </div>
               </motion.div>
             );

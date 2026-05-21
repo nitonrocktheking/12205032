@@ -24,6 +24,7 @@ export interface Unit {
   radius: number;
   special?: string;
   isConverted?: boolean;
+  imagePath?: string;
 }
 
 export interface Tower {
@@ -41,7 +42,10 @@ export interface Tower {
 
 export interface CardDef {
   id: string;
+  fullName: string;
   name: string;
+  powerName: string;
+  powerDesc: string;
   cost: number;
   color: string;
   label: string;
@@ -53,6 +57,7 @@ export interface CardDef {
   attackSpeed: number;
   radius: number;
   special?: string;
+  imagePath?: string;
 }
 
 export interface GameState {
