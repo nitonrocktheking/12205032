@@ -34,10 +34,12 @@ function UserBar() {
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-black text-white text-sm leading-tight truncate">
-              Niveau {me.profile.level}
+            <div className="font-black text-white text-sm leading-tight truncate" data-testid="text-username">
+              {me.profile.displayName ?? `Niveau ${me.profile.level}`}
             </div>
             <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mt-0.5">
+              <span>Niv. {me.profile.level}</span>
+              <span className="text-slate-600">·</span>
               <span className="inline-flex items-center gap-0.5 text-emerald-300">
                 <Trophy className="w-3 h-3" />{me.profile.wins}V
               </span>

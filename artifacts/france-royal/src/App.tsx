@@ -17,6 +17,8 @@ import SignUpPage from "./pages/SignUpPage";
 import Collection from "./pages/Collection";
 import DeckEditor from "./pages/DeckEditor";
 import Admin from "./pages/Admin";
+import UsernameSetup from "./pages/UsernameSetup";
+import { useMe } from "./hooks/useMe";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -84,10 +86,30 @@ const clerkAppearance = {
 
 const queryClient = new QueryClient();
 
+// Gates a signed-in screen behind the username setup. While /api/me is loading we render
+// a tiny placeholder so we don't flicker the inner page or the setup screen.
+function RequireUsername({ children }: { children: React.ReactNode }) {
+  const { data: me, isLoading, isError } = useMe();
+  if (isLoading || (!me && !isError)) {
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+  }
+  if (isError || !me) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-300 text-sm p-6 text-center">
+        Connexion au serveur impossible. Vérifie ta connexion puis recharge la page.
+      </div>
+    );
+  }
+  if (!me.profile.displayName) {
+    return <UsernameSetup />;
+  }
+  return <>{children}</>;
+}
+
 function HomeRoute() {
   return (
     <>
-      <Show when="signed-in"><Menu /></Show>
+      <Show when="signed-in"><RequireUsername><Menu /></RequireUsername></Show>
       <Show when="signed-out"><Menu /></Show>
     </>
   );
@@ -96,7 +118,7 @@ function HomeRoute() {
 function GuardedGame() {
   return (
     <>
-      <Show when="signed-in"><Game /></Show>
+      <Show when="signed-in"><RequireUsername><Game /></RequireUsername></Show>
       <Show when="signed-out"><Redirect to="/sign-in" /></Show>
     </>
   );
@@ -104,7 +126,7 @@ function GuardedGame() {
 function GuardedLobby() {
   return (
     <>
-      <Show when="signed-in"><Lobby /></Show>
+      <Show when="signed-in"><RequireUsername><Lobby /></RequireUsername></Show>
       <Show when="signed-out"><Redirect to="/sign-in" /></Show>
     </>
   );
@@ -112,7 +134,7 @@ function GuardedLobby() {
 function GuardedCollection() {
   return (
     <>
-      <Show when="signed-in"><Collection /></Show>
+      <Show when="signed-in"><RequireUsername><Collection /></RequireUsername></Show>
       <Show when="signed-out"><Redirect to="/sign-in" /></Show>
     </>
   );
@@ -120,7 +142,7 @@ function GuardedCollection() {
 function GuardedDeckEditor() {
   return (
     <>
-      <Show when="signed-in"><DeckEditor /></Show>
+      <Show when="signed-in"><RequireUsername><DeckEditor /></RequireUsername></Show>
       <Show when="signed-out"><Redirect to="/sign-in" /></Show>
     </>
   );
@@ -168,7 +190,10 @@ function ClerkRouter() {
             <Route path="/lobby"       component={GuardedLobby} />
             <Route path="/collection"  component={GuardedCollection} />
             <Route path="/deck"        component={GuardedDeckEditor} />
-            <Route path="/results"     component={Results} />
+            <Route path="/results">
+              <Show when="signed-in"><RequireUsername><Results /></RequireUsername></Show>
+              <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+            </Route>
             <Route path="/admin"       component={Admin} />
             <Route component={NotFound} />
           </Switch>

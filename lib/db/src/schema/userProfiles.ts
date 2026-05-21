@@ -4,7 +4,11 @@ import { z } from "zod/v4";
 
 export const userProfilesTable = pgTable("user_profiles", {
   clerkUserId: text("clerk_user_id").primaryKey(),
-  displayName: text("display_name").notNull().default("Joueur"),
+  // Nullable until the player picks one via the username setup screen.
+  // Uniqueness is enforced case-insensitively via a Postgres expression index
+  // (`user_profiles_display_name_lower_uq` on LOWER(display_name)), not via a
+  // column-level UNIQUE — see the migration in routes/me.ts comments.
+  displayName: text("display_name"),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   gold: integer("gold").notNull().default(0),

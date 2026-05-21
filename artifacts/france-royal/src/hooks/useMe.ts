@@ -5,7 +5,7 @@ const api = (p: string) => `${basePath}/api${p}`;
 
 export interface UserProfile {
   clerkUserId: string;
-  displayName: string;
+  displayName: string | null;
   level: number;
   xp: number;
   gold: number;
@@ -95,6 +95,24 @@ export function useReportMatchResult() {
       });
       if (!r.ok) throw new Error("report failed");
       return r.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+}
+
+export function useSetUsername() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (username: string) => {
+      const r = await fetch(api(`/me/username`), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error || "Erreur");
+      return body as { ok: true; username: string };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
   });

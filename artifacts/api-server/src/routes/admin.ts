@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { eq } from "drizzle-orm";
-import { db, userProfilesTable, userCardsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { db, userProfilesTable, userCardsTable, userDecksTable } from "@workspace/db";
 import { ALL_CARDS, isValidCardId } from "../lib/cardsCatalog";
 import { logger } from "../lib/logger";
 
@@ -102,6 +102,70 @@ router.post("/admin/grant-card", requireAdmin, async (req, res) => {
   }
 
   res.json({ ok: true, granted, total: targetIds.length });
+});
+
+// POST /api/admin/remove-card { target: "all" | "<userId>", cardId }
+// Removes the card from the target's collection AND strips it from every deck the
+// affected user(s) own, so saved decks don't reference cards they no longer have.
+router.post("/admin/remove-card", requireAdmin, async (req, res) => {
+  const { target, cardId } = req.body as { target?: unknown; cardId?: unknown };
+  if (typeof target !== "string" || typeof cardId !== "string" || !isValidCardId(cardId)) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+
+  let targetIds: string[];
+  if (target === "all") {
+    const all = await db.select({ id: userProfilesTable.clerkUserId }).from(userProfilesTable);
+    targetIds = all.map((r) => r.id);
+  } else {
+    const found = await db
+      .select({ id: userProfilesTable.clerkUserId })
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkUserId, target))
+      .limit(1);
+    if (found.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    targetIds = [target];
+  }
+
+  let removed = 0;
+  for (const userId of targetIds) {
+    const del = await db
+      .delete(userCardsTable)
+      .where(and(eq(userCardsTable.clerkUserId, userId), eq(userCardsTable.cardId, cardId)))
+      .returning({ id: userCardsTable.cardId });
+    if (del.length > 0) removed += 1;
+
+    // Repair any deck that referenced the removed card. We strip the card and try
+    // to backfill from the user's remaining owned cards so the deck stays at 8.
+    // If the user owns fewer than 8 cards total, the deck stays short — engine
+    // start-up code already treats non-8 decks as invalid and falls back safely.
+    const ownedRows = await db
+      .select({ cardId: userCardsTable.cardId })
+      .from(userCardsTable)
+      .where(eq(userCardsTable.clerkUserId, userId));
+    const ownedSet = new Set(ownedRows.map((r) => r.cardId));
+
+    const decks = await db.select().from(userDecksTable).where(eq(userDecksTable.clerkUserId, userId));
+    for (const d of decks) {
+      if (!d.cardIds.includes(cardId)) continue;
+      const kept = d.cardIds.filter((c) => c !== cardId && ownedSet.has(c));
+      const inDeck = new Set(kept);
+      const candidates = [...ownedSet].filter((c) => !inDeck.has(c));
+      while (kept.length < 8 && candidates.length > 0) {
+        kept.push(candidates.shift()!);
+      }
+      await db
+        .update(userDecksTable)
+        .set({ cardIds: kept })
+        .where(and(eq(userDecksTable.clerkUserId, userId), eq(userDecksTable.slot, d.slot)));
+    }
+  }
+
+  res.json({ ok: true, removed, total: targetIds.length });
 });
 
 export default router;

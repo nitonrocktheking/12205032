@@ -19,7 +19,24 @@ const requireAuth = (req: AuthedRequest, res: Response, next: NextFunction) => {
   next();
 };
 
+// Blocks progression/economy mutations until the player has picked a unique pseudo.
+// Combined with the client-side RequireUsername gate so the requirement can't be
+// bypassed by hitting the API directly (e.g. by deep-linking /results).
+async function requireUsernameSet(userId: string, res: Response): Promise<boolean> {
+  const [p] = await db.select({ name: userProfilesTable.displayName })
+    .from(userProfilesTable)
+    .where(eq(userProfilesTable.clerkUserId, userId))
+    .limit(1);
+  if (!p || !p.name) {
+    res.status(412).json({ error: "USERNAME_REQUIRED" });
+    return false;
+  }
+  return true;
+}
+
 // Just-in-time provisioning: ensure user has a profile, starter cards, and a default deck.
+// displayName is intentionally left NULL — the client must collect it via /username-setup
+// before allowing any further interaction. Most routes still operate without a displayName.
 async function ensureProvisioned(userId: string) {
   const existing = await db.select().from(userProfilesTable).where(eq(userProfilesTable.clerkUserId, userId)).limit(1);
   if (existing.length > 0) return;
@@ -32,6 +49,8 @@ async function ensureProvisioned(userId: string) {
     .values({ clerkUserId: userId, slot: 0, cardIds: [...STARTER_CARDS] })
     .onConflictDoNothing();
 }
+
+const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
 
 const router: IRouter = Router();
 
@@ -54,6 +73,7 @@ router.put("/me/decks/:slot", requireAuth, async (req: AuthedRequest, res) => {
   if (!Number.isInteger(slot) || slot < 0 || slot > 2) {
     res.status(400).json({ error: "Invalid slot" }); return;
   }
+  if (!(await requireUsernameSet(userId, res))) return;
   const { cardIds } = req.body as { cardIds?: unknown };
   if (!Array.isArray(cardIds) || cardIds.length !== 8) {
     res.status(400).json({ error: "Deck must contain exactly 8 cards" }); return;
@@ -103,6 +123,7 @@ router.put("/me/selected-deck", requireAuth, async (req: AuthedRequest, res) => 
 router.post("/me/match-result", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.userId!;
   await ensureProvisioned(userId);
+  if (!(await requireUsernameSet(userId, res))) return;
   const { result } = req.body as { result?: unknown };
   if (result !== "win" && result !== "loss" && result !== "draw") {
     res.status(400).json({ error: "Invalid result" }); return;
@@ -145,6 +166,45 @@ router.post("/me/match-result", requireAuth, async (req: AuthedRequest, res) => 
     newLevel, leveledUp: newLevel > profile.level,
     unlockedCard,
   });
+});
+
+// POST /api/me/username — set or change the player's unique pseudo
+router.post("/me/username", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.userId!;
+  await ensureProvisioned(userId);
+  const { username } = req.body as { username?: unknown };
+  if (typeof username !== "string") {
+    res.status(400).json({ error: "Pseudo invalide" }); return;
+  }
+  const trimmed = username.trim();
+  if (!USERNAME_RE.test(trimmed)) {
+    res.status(400).json({ error: "Le pseudo doit faire 3 à 20 caractères (lettres, chiffres, _ ou -)." }); return;
+  }
+
+  // Case-insensitive uniqueness check (DB unique index is case-sensitive, so we also check here).
+  const lower = trimmed.toLowerCase();
+  const allProfiles = await db
+    .select({ id: userProfilesTable.clerkUserId, name: userProfilesTable.displayName })
+    .from(userProfilesTable);
+  const taken = allProfiles.find(
+    (p) => p.id !== userId && p.name && p.name.toLowerCase() === lower,
+  );
+  if (taken) {
+    res.status(409).json({ error: "Ce pseudo est déjà pris." }); return;
+  }
+
+  try {
+    await db.update(userProfilesTable)
+      .set({ displayName: trimmed })
+      .where(eq(userProfilesTable.clerkUserId, userId));
+  } catch (e: unknown) {
+    // PG unique constraint violation
+    if (typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "23505") {
+      res.status(409).json({ error: "Ce pseudo est déjà pris." }); return;
+    }
+    throw e;
+  }
+  res.json({ ok: true, username: trimmed });
 });
 
 // POST /api/me/tutorial-done

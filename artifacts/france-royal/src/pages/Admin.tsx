@@ -134,17 +134,26 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
 
   useEffect(() => { reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
-  const grant = async (target: string, cardId: string) => {
+  const callCardOp = async (
+    op: "grant" | "remove",
+    target: string,
+    cardId: string,
+  ) => {
     setBusy(true);
     try {
-      const r = await adminFetch<{ granted: number; total: number }>(
-        "/admin/grant-card", password,
+      const endpoint = op === "grant" ? "/admin/grant-card" : "/admin/remove-card";
+      const r = await adminFetch<{ granted?: number; removed?: number; total: number }>(
+        endpoint, password,
         { method: "POST", body: JSON.stringify({ target, cardId }) },
       );
+      const count = op === "grant" ? r.granted ?? 0 : r.removed ?? 0;
+      const verb = op === "grant" ? "donnée" : "retirée";
       toast.success(
         target === "all"
-          ? `Carte donnée à ${r.granted}/${r.total} joueurs.`
-          : `Carte donnée (${r.granted ? "nouvelle" : "déjà possédée"}).`,
+          ? `Carte ${verb} à/de ${count}/${r.total} joueur(s).`
+          : op === "grant"
+            ? `Carte donnée (${count ? "nouvelle" : "déjà possédée"}).`
+            : `Carte ${count ? "retirée" : "non possédée"}.`,
       );
       await reload();
     } catch (e: any) {
@@ -158,6 +167,9 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
       setBusy(false);
     }
   };
+
+  const grant  = (target: string, cardId: string) => callCardOp("grant",  target, cardId);
+  const remove = (target: string, cardId: string) => callCardOp("remove", target, cardId);
 
   const filteredUsers = users?.filter((u) => {
     if (!filter) return true;
@@ -176,27 +188,35 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
           </Button>
         </div>
 
-        {/* Bulk grant */}
+        {/* Bulk grant / remove */}
         <div className="bg-gradient-to-br from-fuchsia-950/40 to-slate-900 border border-fuchsia-900/50 rounded-2xl p-4 space-y-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
-          <div className="text-[10px] uppercase tracking-widest text-fuchsia-300 font-bold">Donner à tout le monde</div>
-          <div className="flex gap-2">
-            <select
-              value={bulkCard}
-              onChange={(e) => setBulkCard(e.target.value)}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
-              data-testid="select-bulk-card"
-            >
-              {allCards.map((id) => (
-                <option key={id} value={id}>{CARDS[id]?.fullName ?? id}</option>
-              ))}
-            </select>
+          <div className="text-[10px] uppercase tracking-widest text-fuchsia-300 font-bold">Actions de masse</div>
+          <select
+            value={bulkCard}
+            onChange={(e) => setBulkCard(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+            data-testid="select-bulk-card"
+          >
+            {allCards.map((id) => (
+              <option key={id} value={id}>{CARDS[id]?.fullName ?? id}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
             <Button
               onClick={() => bulkCard && grant("all", bulkCard)}
               disabled={busy || !bulkCard}
-              className="bg-fuchsia-600 hover:bg-fuchsia-700 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+              className="bg-emerald-600 hover:bg-emerald-700 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)]"
               data-testid="button-grant-all"
             >
               Donner à tous
+            </Button>
+            <Button
+              onClick={() => bulkCard && remove("all", bulkCard)}
+              disabled={busy || !bulkCard}
+              className="bg-rose-600 hover:bg-rose-700 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+              data-testid="button-remove-all"
+            >
+              Retirer à tous
             </Button>
           </div>
         </div>
@@ -217,7 +237,14 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
         {/* User list */}
         <div className="space-y-2">
           {filteredUsers?.map((u) => (
-            <UserRow key={u.clerkUserId} user={u} allCards={allCards} busy={busy} onGrant={grant} />
+            <UserRow
+              key={u.clerkUserId}
+              user={u}
+              allCards={allCards}
+              busy={busy}
+              onGrant={grant}
+              onRemove={remove}
+            />
           ))}
           {filteredUsers && filteredUsers.length === 0 && (
             <div className="text-center text-slate-500 py-8 text-sm">Aucun joueur trouvé.</div>
@@ -229,12 +256,13 @@ function Panel({ password, onLogout }: { password: string; onLogout: () => void 
 }
 
 function UserRow({
-  user, allCards, busy, onGrant,
+  user, allCards, busy, onGrant, onRemove,
 }: {
   user: AdminUser;
   allCards: string[];
   busy: boolean;
   onGrant: (target: string, cardId: string) => void;
+  onRemove: (target: string, cardId: string) => void;
 }) {
   const lockedCards = allCards.filter((id) => !user.ownedCards.includes(id));
   const [pick, setPick] = useState<string>(lockedCards[0] ?? allCards[0] ?? "");
@@ -246,31 +274,33 @@ function UserRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.ownedCards.length]);
 
+  const pickOwned = user.ownedCards.includes(pick);
+
   return (
     <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-3 shadow-[0_4px_0_rgba(0,0,0,0.4)]">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0 flex-1">
           <div className="font-bold text-white truncate" data-testid={`user-name-${user.clerkUserId}`}>
-            {user.displayName || "(sans pseudo)"}
+            {user.displayName || <span className="italic text-slate-500">(pseudo non défini)</span>}
           </div>
           <div className="text-[10px] text-slate-500 font-mono truncate">{user.clerkUserId}</div>
           <div className="text-xs text-slate-400 mt-1">
-            Niv. {user.level} · {user.wins}V/{user.losses}D · 🪙 {user.gold} · {user.ownedCards.length}/{allCards.length} cartes
+            Niv. {user.level} · {user.wins}V/{user.losses}D · {user.gold} or · {user.ownedCards.length}/{allCards.length} cartes
           </div>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <select
           value={pick}
           onChange={(e) => setPick(e.target.value)}
-          className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs"
+          className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs"
           data-testid={`select-card-${user.clerkUserId}`}
         >
           {allCards.map((id) => {
             const owned = user.ownedCards.includes(id);
             return (
               <option key={id} value={id}>
-                {owned ? "✓ " : ""}{CARDS[id]?.fullName ?? id}
+                {owned ? "✓ " : "○ "}{CARDS[id]?.fullName ?? id}
               </option>
             );
           })}
@@ -278,11 +308,20 @@ function UserRow({
         <Button
           size="sm"
           onClick={() => pick && onGrant(user.clerkUserId, pick)}
-          disabled={busy || !pick}
-          className="bg-blue-600 hover:bg-blue-700 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)] text-xs"
+          disabled={busy || !pick || pickOwned}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)] text-xs"
           data-testid={`button-grant-${user.clerkUserId}`}
         >
           Donner
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => pick && onRemove(user.clerkUserId, pick)}
+          disabled={busy || !pick || !pickOwned}
+          className="bg-rose-600 hover:bg-rose-700 disabled:opacity-40 font-bold shadow-[0_3px_0_rgba(0,0,0,0.4)] text-xs"
+          data-testid={`button-remove-${user.clerkUserId}`}
+        >
+          Retirer
         </Button>
       </div>
     </div>
