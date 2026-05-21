@@ -1,74 +1,73 @@
 import { motion } from "framer-motion";
-import { Unit } from "../game/types";
-import { ARENA_WIDTH, ARENA_HEIGHT } from "../game/constants";
+import { Faction, Unit } from "../game/types";
 
-export default function UnitComponent({ unit }: { unit: Unit }) {
-  const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
-  const size = unit.radius * 2;
+interface Props {
+  unit: Unit;
+  displayX: number;
+  displayY: number;
+  localFaction?: Faction;
+}
+
+export default function UnitComponent({ unit, displayX, displayY, localFaction = "player" }: Props) {
+  const hpPct  = Math.max(0, (unit.hp / unit.maxHp) * 100);
+  const size   = unit.radius * 2;
+
+  // isMine = this unit is on the local player's side
+  const isMine = unit.faction === localFaction;
   const isConverted = unit.isConverted;
 
-  const borderColor = unit.faction === 'player' 
-    ? (isConverted ? '#a78bfa' : '#60a5fa') 
-    : '#f87171';
-
-  const hpBarColor = unit.faction === 'player' ? '#3b82f6' : '#ef4444';
+  const borderColor = isConverted ? "#a78bfa" : isMine ? "#60a5fa" : "#f87171";
+  const bgColor     = isMine ? "#1d4ed8" : "#b91c1c";
+  const barColor    = isMine ? "#60a5fa" : "#f87171";
 
   return (
     <motion.div
       className="absolute z-20"
       style={{
-        width: size,
-        height: size,
-        left: `${(unit.position.x / ARENA_WIDTH) * 100}%`,
-        top: `${(unit.position.y / ARENA_HEIGHT) * 100}%`,
+        width: size, height: size,
+        left: `${displayX}%`,
+        top:  `${displayY}%`,
         marginLeft: -unit.radius,
-        marginTop: -unit.radius,
+        marginTop:  -unit.radius,
       }}
       initial={false}
-      animate={{
-        left: `${(unit.position.x / ARENA_WIDTH) * 100}%`,
-        top: `${(unit.position.y / ARENA_HEIGHT) * 100}%`,
-      }}
-      transition={{ type: 'tween', duration: 0.08, ease: 'linear' }}
+      animate={{ left: `${displayX}%`, top: `${displayY}%` }}
+      transition={{ type: "tween", duration: 0.08, ease: "linear" }}
     >
       {/* HP bar */}
-      <div 
+      <div
         className="absolute -top-3 left-1/2 h-1.5 bg-black/70 rounded-full overflow-hidden border border-black/40"
         style={{ width: Math.max(size, 28), marginLeft: -Math.max(size, 28) / 2 }}
       >
-        <div 
+        <div
           className="h-full rounded-full transition-all"
-          style={{ width: `${hpPercent}%`, backgroundColor: hpBarColor }} 
+          style={{ width: `${hpPct}%`, backgroundColor: barColor }}
         />
       </div>
 
-      {/* Unit circle */}
+      {/* Body */}
       <div
         className="w-full h-full rounded-full overflow-hidden flex items-center justify-center font-black text-white shadow-lg"
         style={{
           border: `2px solid ${borderColor}`,
-          backgroundColor: unit.color,
+          backgroundColor: bgColor,
           fontSize: Math.max(7, unit.radius * 0.55),
         }}
       >
         {unit.imagePath ? (
-          <img 
-            src={unit.imagePath} 
+          <img
+            src={unit.imagePath}
             alt={unit.label}
             className="w-full h-full object-cover object-top"
-            style={{ filter: unit.faction === 'enemy' ? 'hue-rotate(140deg) saturate(1.5)' : 'none' }}
           />
         ) : (
           <span className="select-none leading-none">{unit.label}</span>
         )}
       </div>
 
-      {/* Conversion sparkle indicator */}
+      {/* Converted indicator */}
       {isConverted && (
-        <div 
-          className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-violet-400 border border-white animate-pulse"
-          title="Converti"
-        />
+        <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-violet-400 border border-white animate-pulse" />
       )}
     </motion.div>
   );
