@@ -16,6 +16,7 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import Collection from "./pages/Collection";
 import DeckEditor from "./pages/DeckEditor";
+import Admin from "./pages/Admin";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -168,6 +169,7 @@ function ClerkRouter() {
             <Route path="/collection"  component={GuardedCollection} />
             <Route path="/deck"        component={GuardedDeckEditor} />
             <Route path="/results"     component={Results} />
+            <Route path="/admin"       component={Admin} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />
