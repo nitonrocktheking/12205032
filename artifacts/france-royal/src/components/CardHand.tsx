@@ -1,7 +1,9 @@
 import { CardDef } from "../game/types";
 import { motion, AnimatePresence } from "framer-motion";
+import { useT } from "../hooks/useT";
 
 function CardTooltip({ card }: { card: CardDef }) {
+  const { t } = useT();
   return (
     <motion.div
       key={card.id}
@@ -57,10 +59,10 @@ function CardTooltip({ card }: { card: CardDef }) {
 
         {/* Stats bar */}
         <div className="flex border-t border-white/10">
-          <StatPill label="PV" value={card.baseHp} color="#4ade80" />
-          <StatPill label="DGT" value={card.baseDamage} color="#f87171" />
-          <StatPill label="VIT" value={card.speed} color="#60a5fa" />
-          <StatPill label="ATK/s" value={+(1 / card.attackSpeed).toFixed(1)} color="#fbbf24" />
+          <StatPill label={t("card_detail.hp")} value={card.baseHp} color="#4ade80" />
+          <StatPill label={t("card_detail.damage")} value={card.baseDamage} color="#f87171" />
+          <StatPill label={t("card_detail.speed")} value={card.speed} color="#60a5fa" />
+          <StatPill label={t("card_detail.cadence")} value={+(1 / card.attackSpeed).toFixed(1)} color="#fbbf24" />
         </div>
       </div>
     </motion.div>
@@ -89,6 +91,7 @@ export default function CardHand({
   selected: number | null;
   onSelect: (idx: number | null) => void;
 }) {
+  const { t } = useT();
   const selectedCard = selected !== null ? hand[selected] : null;
 
   return (
@@ -101,7 +104,7 @@ export default function CardHand({
       <div className="flex justify-between items-end gap-1.5">
         {/* Next Card Preview */}
         <div className="shrink-0 flex flex-col items-center gap-1" style={{ width: "14%", minWidth: 44, maxWidth: 60 }}>
-          <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">Suivant</span>
+          <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">{t("hud.next_card")}</span>
           {nextCard && (
             <div
               className="w-full aspect-[7/8] rounded-lg overflow-hidden border border-slate-600 relative"

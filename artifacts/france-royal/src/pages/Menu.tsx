@@ -7,11 +7,14 @@ import { useIsGuest } from "../hooks/useGuest";
 import CardTile from "../components/CardTile";
 import { getArenaForLevel, getNextArena } from "../game/arenas";
 import LogoutButton from "../components/LogoutButton";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { SPLASH_SEEN_KEY } from "./Splash";
-import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle, TrendingUp, Users } from "lucide-react";
+import { useT } from "../hooks/useT";
+import { Swords, Library, Layers, Coins, Trophy, HelpCircle, TrendingUp, Users } from "lucide-react";
 
 function UserBar() {
   const { data: me } = useMe();
+  const { t } = useT();
   if (!me) return null;
 
   const { xpIntoLevel, xpPerLevel } = me.progression;
@@ -37,16 +40,16 @@ function UserBar() {
           </div>
           <div className="min-w-0">
             <div className="font-black text-white text-sm leading-tight truncate" data-testid="text-username">
-              {me.profile.displayName ?? `Niveau ${me.profile.level}`}
+              {me.profile.displayName ?? t("menu.level_fallback", { level: me.profile.level })}
             </div>
             <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mt-0.5">
-              <span>Niv. {me.profile.level}</span>
+              <span>{t("common.level_short")} {me.profile.level}</span>
               <span className="text-slate-600">·</span>
               <span className="inline-flex items-center gap-0.5 text-emerald-300">
-                <Trophy className="w-3 h-3" />{me.profile.wins}V
+                <Trophy className="w-3 h-3" />{me.profile.wins}{t("menu.wins_short")}
               </span>
               <span className="text-slate-600">·</span>
-              <span>{me.profile.losses}D</span>
+              <span>{me.profile.losses}{t("menu.losses_short")}</span>
               <span className="text-slate-600">·</span>
               <span>{Math.round(xpIntoLevel)}/{xpPerLevel} XP</span>
             </div>
@@ -57,6 +60,7 @@ function UserBar() {
             <Coins className="w-3.5 h-3.5" />
             <span data-testid="text-gold">{me.profile.gold}</span>
           </div>
+          <LanguageSwitcher />
           <LogoutButton />
         </div>
       </div>
@@ -66,6 +70,7 @@ function UserBar() {
 
 function ArenaBadge() {
   const { data: me } = useMe();
+  const { t } = useT();
   if (!me) return null;
   const arena = getArenaForLevel(me.profile.level);
   const next = getNextArena(me.profile.level);
@@ -80,14 +85,14 @@ function ArenaBadge() {
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-3xl drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)] shrink-0">{arena.emoji}</span>
           <div className="text-left min-w-0">
-            <div className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Arène actuelle</div>
+            <div className="text-[10px] uppercase tracking-widest text-white/80 font-bold">{t("menu.current_arena")}</div>
             <div className="text-sm font-black text-white drop-shadow truncate">{arena.name}</div>
           </div>
         </div>
         {next && (
           <div className="text-right text-[10px] text-white/90 font-bold shrink-0 bg-black/25 rounded-lg px-2 py-1 backdrop-blur-sm">
-            <div className="uppercase tracking-wider text-white/70">Suivante</div>
-            <div className="text-sm">{next.emoji} Niv. {next.minLevel}</div>
+            <div className="uppercase tracking-wider text-white/70">{t("menu.next_arena")}</div>
+            <div className="text-sm">{next.emoji} {t("common.level_short")} {next.minLevel}</div>
           </div>
         )}
       </div>
@@ -97,17 +102,18 @@ function ArenaBadge() {
 
 function DeckPreview() {
   const { data: me } = useMe();
+  const { t } = useT();
   if (!me) return null;
   const deck = getSelectedDeck(me);
   return (
     <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-[0_4px_0_rgba(0,0,0,0.4)]">
       <div className="flex items-center justify-between mb-2">
         <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold inline-flex items-center gap-1.5">
-          <Layers className="w-3 h-3" /> Deck actif
+          <Layers className="w-3 h-3" /> {t("menu.active_deck")}
         </div>
         <Link href="/deck">
           <span className="text-[10px] uppercase tracking-widest text-blue-400 font-bold hover:text-blue-300 hover:underline cursor-pointer">
-            Modifier →
+            {t("menu.edit")}
           </span>
         </Link>
       </div>
@@ -126,6 +132,7 @@ export default function Menu() {
   const [, setLocation] = useLocation();
   const { isSignedIn } = useUser();
   const isGuest = useIsGuest();
+  const { t } = useT();
   // Treat both Clerk users and guest-cookie sessions as authenticated so
   // guests see the full Play/Collection/Deck/Progression UI.
   const isAuthed = !!isSignedIn || isGuest;
@@ -152,7 +159,7 @@ export default function Menu() {
         <div className="text-center pb-1">
           <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.4em] text-fuchsia-300/90 mb-2">
             <span className="h-px w-6 bg-fuchsia-500/50" />
-            République Royale
+            {t("menu.republique_royale")}
             <span className="h-px w-6 bg-fuchsia-500/50" />
           </div>
           <h1
@@ -178,25 +185,26 @@ export default function Menu() {
             ROYAL
           </h1>
           <p className="text-[11px] text-slate-500 font-medium mt-3 tracking-[0.2em] uppercase">
-            L'Assemblée dans l'arène
+            {t("menu.tagline")}
           </p>
         </div>
 
         {!isAuthed && (
           <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-4 space-y-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
-            <p className="text-sm text-slate-300 text-center">Connectez-vous pour jouer, collectionner et bâtir votre deck.</p>
+            <div className="flex justify-center"><LanguageSwitcher /></div>
+            <p className="text-sm text-slate-300 text-center">{t("menu.sign_in_prompt")}</p>
             <Link href="/sign-in">
               <Button className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-[0_4px_0_rgba(0,0,0,0.4)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.4)]" data-testid="button-sign-in">
-                Se connecter
+                {t("menu.sign_in")}
               </Button>
             </Link>
             <Link href="/sign-up">
               <Button variant="outline" className="w-full h-12 text-base font-bold border-2 border-fuchsia-500 text-fuchsia-300 hover:bg-fuchsia-900/30" data-testid="button-sign-up">
-                Créer un compte
+                {t("menu.sign_up")}
               </Button>
             </Link>
             <p className="text-[10px] text-slate-500 text-center pt-1">
-              Pseudo + mot de passe, ou Google. Ou continuez en invité.
+              {t("menu.sign_up_hint")}
             </p>
           </div>
         )}
@@ -215,7 +223,7 @@ export default function Menu() {
                 data-testid="button-play"
               >
                 <Swords className="w-6 h-6 mr-2 transition-transform group-hover:rotate-12" />
-                Jouer
+                {t("menu.play")}
               </Button>
             </Link>
             <Link href="/lobby">
@@ -225,7 +233,7 @@ export default function Menu() {
                 data-testid="button-private-room"
               >
                 <Users className="w-3.5 h-3.5 mr-1.5" />
-                Salle privée (jouer avec un ami)
+                {t("menu.private_room")}
               </Button>
             </Link>
             <div className="grid grid-cols-2 gap-2">
@@ -236,7 +244,7 @@ export default function Menu() {
                   data-testid="button-collection"
                 >
                   <Library className="w-3.5 h-3.5 mr-1.5" />
-                  Collection
+                  {t("menu.collection")}
                 </Button>
               </Link>
               <Link href="/deck">
@@ -246,7 +254,7 @@ export default function Menu() {
                   data-testid="button-deck"
                 >
                   <Layers className="w-3.5 h-3.5 mr-1.5" />
-                  Éditeur de deck
+                  {t("menu.deck_editor")}
                 </Button>
               </Link>
             </div>
@@ -257,7 +265,7 @@ export default function Menu() {
                 data-testid="button-progression"
               >
                 <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
-                Arbre de progression
+                {t("menu.progression_tree")}
               </Button>
             </Link>
             <Link href="/splash">
@@ -267,7 +275,7 @@ export default function Menu() {
                 data-testid="button-tutorial"
               >
                 <HelpCircle className="w-3.5 h-3.5 mr-1.5" />
-                Revoir le tutoriel
+                {t("menu.replay_tutorial")}
               </Button>
             </Link>
           </div>

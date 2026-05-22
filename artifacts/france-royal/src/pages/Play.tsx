@@ -4,6 +4,7 @@ import { useMultiplayer, MPMessage } from "../hooks/useMultiplayer";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
 import { Button } from "@/components/ui/button";
 import { Swords, X } from "lucide-react";
+import { useT } from "../hooks/useT";
 
 const MATCHMAKING_TIMEOUT_MS = 5_000;
 const MP_FORBIDDEN_CARDS = new Set(["urssaf"]);
@@ -13,8 +14,9 @@ const TICK_MS = 100;
 
 export default function Play() {
   const { data: me, isLoading } = useMe();
+  const { t } = useT();
   if (isLoading || !me) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Chargement…</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">{t("common.loading")}</div>;
   }
   // We only mount the inner component (and its WebSocket) AFTER `me` is
   // available, so the very first `find_match` we send always carries the
@@ -24,10 +26,11 @@ export default function Play() {
 
 function PlayInner({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]> }) {
   const [, setLocation] = useLocation();
+  const { t } = useT();
 
   const selected = getSelectedDeck(me);
   const deck = selected && selected.length === 8 ? selected : undefined;
-  const displayName = me.profile.displayName ?? "Joueur";
+  const displayName = me.profile.displayName ?? t("common.player");
   const forbiddenInDeck = (deck ?? []).filter((id) => MP_FORBIDDEN_CARDS.has(id));
   // If the player has URSSAF in their deck, skip matchmaking entirely and go
   // straight to solo (where URSSAF is allowed) so they're never stuck.
@@ -113,7 +116,7 @@ function PlayInner({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]> }
       <div className="relative z-10 max-w-sm w-full space-y-6 text-center">
         <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.4em] text-fuchsia-300/90">
           <span className="h-px w-6 bg-fuchsia-500/50" />
-          Matchmaking
+          {t("play.badge")}
           <span className="h-px w-6 bg-fuchsia-500/50" />
         </div>
 
@@ -131,17 +134,17 @@ function PlayInner({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]> }
                   <>
                     <Swords className="w-7 h-7 text-fuchsia-300 mb-1 animate-pulse" />
                     <div className="text-3xl font-black text-white">{secondsLeft}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">secondes</div>
+                    <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("play.seconds")}</div>
                   </>
                 )}
                 {phase === "matched" && (
-                  <div className="text-emerald-300 font-black uppercase tracking-widest text-xs px-2 text-center">
-                    Adversaire<br />trouvé !
+                  <div className="text-emerald-300 font-black uppercase tracking-widest text-xs px-2 text-center whitespace-pre-line">
+                    {t("play.opponent_found")}
                   </div>
                 )}
                 {phase === "falling-back" && (
-                  <div className="text-blue-300 font-black uppercase tracking-widest text-xs px-2 text-center">
-                    Mode<br />solo
+                  <div className="text-blue-300 font-black uppercase tracking-widest text-xs px-2 text-center whitespace-pre-line">
+                    {t("play.solo_mode")}
                   </div>
                 )}
               </div>
@@ -151,14 +154,14 @@ function PlayInner({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]> }
 
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-white">
-            {phase === "searching" && "Recherche d'un adversaire…"}
-            {phase === "matched" && "Lancement du match"}
-            {phase === "falling-back" && "Aucun adversaire libre"}
+            {phase === "searching" && t("play.searching_title")}
+            {phase === "matched" && t("play.matched_title")}
+            {phase === "falling-back" && t("play.fallback_title")}
           </h2>
           <p className="text-sm text-slate-400 font-medium">
-            {phase === "searching" && "Si personne ne répond, vous affrontez l'IA."}
-            {phase === "matched" && "Préparation de l'arène…"}
-            {phase === "falling-back" && "Lancement d'un match solo vs IA."}
+            {phase === "searching" && t("play.searching_hint")}
+            {phase === "matched" && t("play.matched_hint")}
+            {phase === "falling-back" && t("play.fallback_hint")}
           </p>
         </div>
 
@@ -176,7 +179,7 @@ function PlayInner({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]> }
             data-testid="button-cancel-matchmaking"
           >
             <X className="w-4 h-4 mr-1.5" />
-            Annuler
+            {t("play.cancel")}
           </Button>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useClerk } from "@clerk/react";
 import { LogOut } from "lucide-react";
+import { useT } from "../hooks/useT";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function LogoutButton({ variant = "compact", className = "" }: Props) {
+  const { t } = useT();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
@@ -34,7 +36,7 @@ export default function LogoutButton({ variant = "compact", className = "" }: Pr
         {variant === "compact" ? (
           <button
             type="button"
-            aria-label="Se déconnecter"
+            aria-label={t("logout.aria")}
             data-testid="button-logout"
             className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl
               bg-slate-800/80 hover:bg-rose-600/90 text-slate-300 hover:text-white
@@ -56,16 +58,16 @@ export default function LogoutButton({ variant = "compact", className = "" }: Pr
               ${className}`}
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Déconnexion</span>
+            <span>{t("logout.label")}</span>
           </button>
         )}
       </AlertDialogTrigger>
 
       <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
         <AlertDialogHeader>
-          <AlertDialogTitle>Quitter la session ?</AlertDialogTitle>
+          <AlertDialogTitle>{t("logout.dialog_title")}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-400">
-            Vous serez déconnecté de votre compte. Votre progression est sauvegardée.
+            {t("logout.dialog_desc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -73,14 +75,14 @@ export default function LogoutButton({ variant = "compact", className = "" }: Pr
             data-testid="button-logout-cancel"
             className="bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700 hover:text-white"
           >
-            Annuler
+            {t("logout.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             data-testid="button-logout-confirm"
             onClick={doSignOut}
             className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
           >
-            Se déconnecter
+            {t("logout.confirm_cta")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

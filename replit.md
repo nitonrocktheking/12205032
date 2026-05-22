@@ -49,7 +49,9 @@ A Clash Royale-style browser arena game where French political personalities bat
 
 ## User preferences
 
-- App language: French.
+- App languages: French (default/canonical), English, Spanish. Browser language auto-detected on first visit; otherwise a language picker is shown. Persistent switcher in the Menu UserBar, signed-out panel, and UsernameSetup.
+- Translation dicts: `src/locales/{fr,en,es}.ts` (FR is canonical — missing keys in EN/ES fall back to FR via `translate()` in `src/lib/i18n.ts`). Access via `const { t } = useT()` from `src/hooks/useT.ts`. Use `*_html` keys + the local `<Html>` helper for strings with `<b>`/`<br/>`.
+- Card NAMES stay French (real political personalities are proper nouns). Admin panel is intentionally French-only (moderator-only).
 - Both email/password AND Google login required (Clerk handles both natively).
 - Pseudo-3D style via CSS, not Three.js.
 

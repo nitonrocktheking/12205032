@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSetUsername } from "../hooks/useMe";
 import LogoutButton from "../components/LogoutButton";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { UserCircle2 } from "lucide-react";
+import { useT } from "../hooks/useT";
 
 const RULE = /^[a-zA-Z0-9_-]{3,20}$/;
 
@@ -11,6 +13,7 @@ export default function UsernameSetup() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const setUser = useSetUsername();
+  const { t } = useT();
 
   const valid = RULE.test(username.trim());
 
@@ -18,13 +21,13 @@ export default function UsernameSetup() {
     e.preventDefault();
     setError(null);
     if (!valid) {
-      setError("3 à 20 caractères : lettres, chiffres, _ ou -.");
+      setError(t("username.format_error"));
       return;
     }
     try {
       await setUser.mutateAsync(username.trim());
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t("username.generic_error"));
     }
   };
 
@@ -33,7 +36,8 @@ export default function UsernameSetup() {
       <div className="absolute top-[-15%] left-[-15%] w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-15%] right-[-15%] w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <LanguageSwitcher />
         <LogoutButton variant="full" />
       </div>
 
@@ -46,11 +50,11 @@ export default function UsernameSetup() {
             <UserCircle2 className="w-8 h-8 text-white" />
           </div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-fuchsia-300 font-bold">
-            Dernière étape
+            {t("username.last_step")}
           </div>
-          <h1 className="text-3xl font-black mt-1">Choisis ton pseudo</h1>
+          <h1 className="text-3xl font-black mt-1">{t("username.title")}</h1>
           <p className="text-xs text-slate-400 mt-2">
-            Visible des autres joueurs dans l'arène. Modifiable plus tard.
+            {t("username.visible_hint")}
           </p>
         </div>
 
@@ -58,7 +62,7 @@ export default function UsernameSetup() {
           <Input
             value={username}
             onChange={(e) => { setUsername(e.target.value); setError(null); }}
-            placeholder="MaCadidate2027"
+            placeholder={t("username.placeholder")}
             autoFocus
             maxLength={20}
             className="bg-slate-800 border-slate-700 text-white text-center text-lg font-bold tracking-wide h-12"
@@ -66,7 +70,7 @@ export default function UsernameSetup() {
           />
           <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
             <span className={valid ? "text-emerald-300" : "text-slate-500"}>
-              {username.length === 0 ? "3 à 20 caractères" : valid ? "✓ Format valide" : "Format invalide"}
+              {username.length === 0 ? t("username.length_hint") : valid ? t("username.valid") : t("username.invalid")}
             </span>
             <span className="text-slate-500">{username.length}/20</span>
           </div>
@@ -83,11 +87,11 @@ export default function UsernameSetup() {
           className="w-full h-12 text-base font-black uppercase tracking-wide bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 shadow-[0_4px_0_rgba(0,0,0,0.4),0_0_24px_rgba(59,130,246,0.35)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.4)] border border-blue-400/30"
           data-testid="button-set-username"
         >
-          {setUser.isPending ? "Enregistrement…" : "Entrer dans l'arène"}
+          {setUser.isPending ? t("username.saving") : t("username.cta")}
         </Button>
 
         <p className="text-[10px] text-slate-500 text-center leading-relaxed">
-          Lettres, chiffres, tirets et underscores autorisés. Les pseudos sont uniques (sensibles à la casse pour l'affichage).
+          {t("username.footer")}
         </p>
       </form>
     </div>

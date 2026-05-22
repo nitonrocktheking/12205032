@@ -3,6 +3,7 @@ import { Faction, GameState } from "../game/types";
 import { MAX_ELIXIR } from "../game/constants";
 import { ArenaTheme } from "../game/arenas";
 import { isMuted, toggleMuted, subscribeMuted } from "../lib/sfx";
+import { useT } from "../hooks/useT";
 
 interface HUDProps {
   state: GameState;
@@ -13,6 +14,7 @@ interface HUDProps {
 }
 
 export default function HUD({ state, localFaction = "player", arena, localName, opponentName }: HUDProps) {
+  const { t } = useT();
   const [muted, setMutedState] = useState<boolean>(() => isMuted());
   useEffect(() => subscribeMuted(setMutedState), []);
   // Crowns = enemy towers destroyed (towers belonging to the opposing faction)
@@ -36,11 +38,11 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
         <div className="flex items-center justify-between mb-1.5 text-[11px] font-black uppercase tracking-wide">
           <div className="flex items-center gap-1.5 max-w-[42%] min-w-0">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
-            <span className="text-blue-200 truncate" data-testid="text-local-name">{localName ?? "Vous"}</span>
+            <span className="text-blue-200 truncate" data-testid="text-local-name">{localName ?? t("common.you")}</span>
           </div>
           <span className="text-slate-600 text-[9px] tracking-[0.3em]">VS</span>
           <div className="flex items-center gap-1.5 max-w-[42%] min-w-0 justify-end">
-            <span className="text-rose-200 truncate text-right" data-testid="text-opponent-name">{opponentName ?? "Adversaire"}</span>
+            <span className="text-rose-200 truncate text-right" data-testid="text-opponent-name">{opponentName ?? t("common.opponent")}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 shadow-[0_0_6px_rgba(251,113,133,0.8)]" />
           </div>
         </div>
@@ -53,7 +55,7 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
           <button
             type="button"
             onClick={() => toggleMuted()}
-            aria-label={muted ? "Activer le son" : "Couper le son"}
+            aria-label={muted ? t("hud.mute_on") : t("hud.mute_off")}
             data-testid="button-toggle-sfx"
             className="w-6 h-6 rounded-md bg-slate-800/80 hover:bg-slate-700 active:translate-y-px border border-slate-700 text-slate-300 text-xs leading-none flex items-center justify-center shadow-[0_2px_0_rgba(0,0,0,0.4)]"
           >
@@ -78,11 +80,11 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
           </div>
           {state.isOvertime ? (
             <div className="text-[9px] uppercase tracking-[0.25em] font-black text-rose-300 leading-none mt-0.5 animate-pulse">
-              Mort subite · x2 élixir
+              {t("hud.overtime_label")}
             </div>
           ) : doubleElixir ? (
             <div className="text-[9px] uppercase tracking-[0.25em] font-black text-fuchsia-300 leading-none mt-0.5">
-              x2 élixir
+              {t("hud.double_elixir")}
             </div>
           ) : null}
         </div>

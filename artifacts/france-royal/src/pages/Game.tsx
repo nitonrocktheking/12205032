@@ -12,6 +12,7 @@ import CardHand from "../components/CardHand";
 import { useMultiplayer } from "../hooks/useMultiplayer";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
 import { randomAiUsername } from "../game/aiNames";
+import { useT } from "../hooks/useT";
 
 function parseParams() {
   const p = new URLSearchParams(window.location.search);
@@ -27,6 +28,7 @@ function parseParams() {
 }
 
 function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds, localName, opponentNameParam, isFriendly }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[]; localName: string; opponentNameParam: string | null; isFriendly: boolean }) {
+  const { t } = useT();
   const [, setLocation] = useLocation();
   // Solo state is built immediately from the player's selected deck. MP state
   // waits until the server returns BOTH decks (via `rejoined`) so both peers
@@ -45,7 +47,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   const aiNameRef = useRef<string>("");
   if (!aiNameRef.current && !isMultiplayer) aiNameRef.current = randomAiUsername();
   const [opponentName, setOpponentName] = useState<string>(
-    isMultiplayer ? (opponentNameParam ?? "Adversaire") : aiNameRef.current
+    isMultiplayer ? (opponentNameParam ?? t("common.opponent")) : aiNameRef.current
   );
   // Authoritative MP outcome agreed between the two peers. First peer to
   // detect a winner broadcasts it; receiver locks in the same result so both
@@ -309,7 +311,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   if (!renderState || !mpReady) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <p className="animate-pulse">Synchronisation avec l&apos;adversaire…</p>
+        <p className="animate-pulse">{t("game.synchronizing")}</p>
       </div>
     );
   }
@@ -325,12 +327,12 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
       {opponentLeft && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="bg-slate-800 rounded-2xl p-8 text-center space-y-4 border border-slate-600">
-            <p className="text-white font-black text-xl">L&apos;adversaire a quitté !</p>
+            <p className="text-white font-black text-xl">{t("game.opponent_left")}</p>
             <button
               className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl"
               onClick={() => setLocation("/")}
             >
-              Retour au menu
+              {t("game.return_menu")}
             </button>
           </div>
         </div>
@@ -360,13 +362,14 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 }
 
 export default function Game() {
+  const { t } = useT();
   const { seed, isMultiplayer, localFaction, roomCode, opponentNameParam, isFriendly } = parseParams();
   const { data: me, isLoading } = useMe();
 
   // Wait for user data before initializing — needed for solo (deck) AND MP
   // (we send our deck to the server so the opponent can build the same state).
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Préparation de l'arène…</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">{t("game.preparing_arena")}</div>;
   }
 
   const selected = getSelectedDeck(me);
@@ -374,7 +377,7 @@ export default function Game() {
   const playerLevel = me?.profile.level ?? 1;
   const arena = getArenaForLevel(playerLevel) ?? ARENAS[0];
   const ownedCardIds = me?.cards.map((c) => c.cardId) ?? [];
-  const localName = me?.profile.displayName ?? "Vous";
+  const localName = me?.profile.displayName ?? t("common.you");
 
   return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} localName={localName} opponentNameParam={opponentNameParam} isFriendly={isFriendly} />;
 }

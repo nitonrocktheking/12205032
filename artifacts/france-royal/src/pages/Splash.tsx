@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Swords, Coins, Trophy, Layers, ChevronLeft, ChevronRight } from "lucide-react";
+import { useT } from "../hooks/useT";
+
+// Render a translation string that may contain a <b>...</b> tag (used in
+// tutorial copy so the canonical FR/EN/ES strings can highlight key terms).
+function Html({ html, className }: { html: string; className?: string }) {
+  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 export const SPLASH_SEEN_KEY = "france-royal-splash-seen";
 
@@ -51,14 +58,15 @@ function CardMini({ cost, color }: { cost: number; color: string }) {
 export default function Splash() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(0);
+  const { t } = useT();
 
   const steps: Step[] = [
     {
-      title: "Bienvenue dans l'arène",
+      title: t("splash.step1_title"),
       body: (
         <>
-          <p>France Royal, c'est <span className="font-bold text-fuchsia-300">l'Assemblée dans l'arène</span> : tes personnalités politiques préférées s'affrontent en duel sur deux voies.</p>
-          <p className="text-slate-400 text-xs">Solo contre l'IA, ou multijoueur 1v1 en ligne. Parties courtes, deck de 4 cartes, victoire en détruisant la tour royale adverse.</p>
+          <p><Html html={t("splash.step1_p1_html")} className="[&_b]:font-bold [&_b]:text-fuchsia-300" /></p>
+          <p className="text-slate-400 text-xs">{t("splash.step1_p2")}</p>
         </>
       ),
       visual: (
@@ -70,11 +78,11 @@ export default function Splash() {
       ),
     },
     {
-      title: "L'élixir et les cartes",
+      title: t("splash.step2_title"),
       body: (
         <>
-          <p>Ta réserve d'<span className="font-bold text-fuchsia-300">élixir</span> remonte toute seule (max 10). Chaque carte coûte un certain nombre d'élixirs pour être jouée.</p>
-          <p className="text-slate-400 text-xs">Touche une carte de ta main, puis touche l'arène pour faire apparaître ton unité. Gère ton élixir : trop dépenser, c'est ouvrir la porte à l'adversaire.</p>
+          <p><Html html={t("splash.step2_p1_html")} className="[&_b]:font-bold [&_b]:text-fuchsia-300" /></p>
+          <p className="text-slate-400 text-xs">{t("splash.step2_p2")}</p>
         </>
       ),
       visual: (
@@ -88,16 +96,16 @@ export default function Splash() {
           <div className="w-44 h-3 rounded-full bg-black/60 border border-fuchsia-900/60 overflow-hidden">
             <div className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600" style={{ width: "70%" }} />
           </div>
-          <div className="text-[10px] text-fuchsia-300 font-bold tracking-widest uppercase">Élixir 7 / 10</div>
+          <div className="text-[10px] text-fuchsia-300 font-bold tracking-widest uppercase">{t("splash.step2_meter_label")}</div>
         </div>
       ),
     },
     {
-      title: "Tours et voies",
+      title: t("splash.step3_title"),
       body: (
         <>
-          <p>Chaque camp défend <span className="font-bold text-fuchsia-300">3 tours</span> : deux princesses (gauche/droite) et une tour du roi au centre.</p>
-          <p className="text-slate-400 text-xs">Les unités traversent par les <span className="font-bold">deux ponts</span>. Les tours tirent sur les ennemis à portée. Détruire une princesse débloque l'attaque sur la tour du roi de ce côté.</p>
+          <p><Html html={t("splash.step3_p1_html")} className="[&_b]:font-bold [&_b]:text-fuchsia-300" /></p>
+          <p className="text-slate-400 text-xs"><Html html={t("splash.step3_p2_html")} className="[&_b]:font-bold" /></p>
         </>
       ),
       visual: (
@@ -109,26 +117,26 @@ export default function Splash() {
       ),
     },
     {
-      title: "Victoire et récompenses",
+      title: t("splash.step4_title"),
       body: (
         <>
-          <p>La partie se termine quand une <span className="font-bold text-fuchsia-300">tour du roi tombe</span> — ou quand le temps imparti est écoulé (le camp avec le plus de tours détruites gagne).</p>
-          <p className="text-slate-400 text-xs">Chaque match rapporte <span className="text-amber-300 font-bold">or</span> et <span className="text-emerald-300 font-bold">XP</span>. Gagner débloque parfois une nouvelle carte aléatoire jusqu'à compléter la collection.</p>
+          <p><Html html={t("splash.step4_p1_html")} className="[&_b]:font-bold [&_b]:text-fuchsia-300" /></p>
+          <p className="text-slate-400 text-xs"><Html html={t("splash.step4_p2_html")} className="[&_b]:font-bold" /></p>
         </>
       ),
       visual: (
         <div className="flex items-center justify-center gap-4 pt-4">
           <div className="flex flex-col items-center gap-1">
             <div className="w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center shadow-[0_4px_0_rgba(0,0,0,0.4)]"><Coins className="w-6 h-6 text-amber-300" /></div>
-            <div className="text-[10px] text-amber-300 font-black">+12 OR</div>
+            <div className="text-[10px] text-amber-300 font-black">{t("splash.step4_gold")}</div>
           </div>
           <div className="flex flex-col items-center gap-1">
             <div className="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center shadow-[0_4px_0_rgba(0,0,0,0.4)]"><Trophy className="w-6 h-6 text-emerald-300" /></div>
-            <div className="text-[10px] text-emerald-300 font-black">+25 XP</div>
+            <div className="text-[10px] text-emerald-300 font-black">{t("splash.step4_xp")}</div>
           </div>
           <div className="flex flex-col items-center gap-1">
             <div className="w-12 h-12 rounded-full bg-fuchsia-500/20 border-2 border-fuchsia-400 flex items-center justify-center shadow-[0_4px_0_rgba(0,0,0,0.4)]"><Layers className="w-6 h-6 text-fuchsia-300" /></div>
-            <div className="text-[10px] text-fuchsia-300 font-black">CARTE !</div>
+            <div className="text-[10px] text-fuchsia-300 font-black">{t("splash.step4_card")}</div>
           </div>
         </div>
       ),
@@ -172,7 +180,7 @@ export default function Splash() {
         {/* HERO */}
         <div className="text-center select-none">
           <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.4em] text-fuchsia-300/90 mb-2">
-            <span className="h-px w-6 bg-fuchsia-500/50" />République Royale<span className="h-px w-6 bg-fuchsia-500/50" />
+            <span className="h-px w-6 bg-fuchsia-500/50" />{t("menu.republique_royale")}<span className="h-px w-6 bg-fuchsia-500/50" />
           </div>
           <h1 className="text-6xl sm:text-7xl font-black tracking-tight leading-[0.85]" style={{
             background: "linear-gradient(180deg, #f8fafc 0%, #cbd5e1 60%, #64748b 100%)",
@@ -185,7 +193,7 @@ export default function Splash() {
             filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.4))",
           }}>ROYAL</h1>
           {isHero && (
-            <p className="text-[11px] text-slate-500 font-medium mt-3 tracking-[0.2em] uppercase">L'Assemblée dans l'arène</p>
+            <p className="text-[11px] text-slate-500 font-medium mt-3 tracking-[0.2em] uppercase">{t("menu.tagline")}</p>
           )}
         </div>
 
@@ -203,7 +211,7 @@ export default function Splash() {
                 <TowerMini side="enemy" />
               </div>
               <p className="text-sm text-slate-300 text-center leading-relaxed">
-                Plonge dans <span className="font-bold text-white">l'arène politique</span> : pose tes cartes, gère ton élixir, et fais tomber la tour royale adverse.
+                <Html html={t("splash.hero_text_html")} className="[&_b]:font-bold [&_b]:text-white" />
               </p>
               <Button
                 onClick={() => setStep(1)}
@@ -211,20 +219,20 @@ export default function Splash() {
                 data-testid="button-start-tutorial"
               >
                 <Swords className="w-5 h-5 mr-2" />
-                Voir le tutoriel
+                {t("splash.hero_cta")}
               </Button>
               <button
                 onClick={dismiss}
                 className="w-full text-xs text-slate-400 hover:text-slate-200 font-bold uppercase tracking-widest pt-1"
                 data-testid="button-skip-tutorial"
               >
-                Passer
+                {t("splash.hero_skip")}
               </button>
             </>
           ) : (
             <>
               <div className="text-center">
-                <div className="text-[10px] text-fuchsia-300/80 font-black uppercase tracking-[0.3em] mb-1">Étape {step} / {steps.length - 1}</div>
+                <div className="text-[10px] text-fuchsia-300/80 font-black uppercase tracking-[0.3em] mb-1">{t("splash.step_label", { n: step, total: steps.length - 1 })}</div>
                 <h2 className="text-xl font-black text-white">{steps[step].title}</h2>
               </div>
               <div className="rounded-xl bg-slate-950/60 border border-slate-700/60 p-3 min-h-[100px]">
@@ -253,7 +261,7 @@ export default function Splash() {
                   className="h-11 px-4 text-sm font-black uppercase bg-gradient-to-r from-fuchsia-600 to-purple-700 hover:from-fuchsia-500 hover:to-purple-600 shadow-[0_4px_0_rgba(0,0,0,0.4)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.4)] text-white"
                   data-testid="button-tutorial-next"
                 >
-                  {step === steps.length - 1 ? "Jouer" : "Suivant"}
+                  {step === steps.length - 1 ? t("splash.play") : t("splash.next")}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>

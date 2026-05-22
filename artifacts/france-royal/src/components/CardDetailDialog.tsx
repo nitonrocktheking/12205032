@@ -1,6 +1,7 @@
 import { CARDS } from "../game/cards";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Heart, Sword, Zap, Crosshair, Timer, Circle, Coins, Sparkles, Lock, type LucideIcon } from "lucide-react";
+import { useT } from "../hooks/useT";
 
 interface Props {
   cardId: string | null;
@@ -26,13 +27,14 @@ function StatRow({ icon: Icon, label, value, color = "#cbd5e1" }: {
 }
 
 export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
+  const { t } = useT();
   const card = cardId ? CARDS[cardId] : null;
   const open = !!card;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-slate-950 border border-slate-700 text-white max-w-sm p-0 overflow-hidden">
-        <DialogTitle className="sr-only">{card?.fullName ?? "Carte"}</DialogTitle>
+        <DialogTitle className="sr-only">{card?.fullName ?? t("card_detail.card_fallback")}</DialogTitle>
         <DialogDescription className="sr-only">{card?.powerName ?? ""}</DialogDescription>
         {card && (
           <div className="flex flex-col">
@@ -59,7 +61,7 @@ export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 text-white text-xs font-black uppercase tracking-widest">
                     <Lock className="w-3.5 h-3.5" />
-                    Verrouillée
+                    {t("card_detail.locked")}
                   </div>
                 </div>
               )}
@@ -82,12 +84,12 @@ export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
 
             {/* Stats grid (mirrors what's used in the engine) */}
             <div className="px-4 pb-4 grid grid-cols-2 gap-2">
-              <StatRow icon={Heart}     label="PV"       value={card.baseHp || "—"}    color="#f87171" />
-              <StatRow icon={Sword}     label="Dégâts"   value={card.baseDamage || "—"} color="#fb923c" />
-              <StatRow icon={Zap}       label="Vitesse"  value={card.speed || "—"}     color="#60a5fa" />
-              <StatRow icon={Crosshair} label="Portée"   value={card.range || "—"}     color="#a78bfa" />
-              <StatRow icon={Timer}     label="Cadence"  value={card.attackSpeed ? `${card.attackSpeed}s` : "—"} color="#34d399" />
-              <StatRow icon={Circle}    label="Unités"   value={card.spawnCount || "Sort"} color="#fbbf24" />
+              <StatRow icon={Heart}     label={t("card_detail.hp")}      value={card.baseHp || "—"}    color="#f87171" />
+              <StatRow icon={Sword}     label={t("card_detail.damage")}  value={card.baseDamage || "—"} color="#fb923c" />
+              <StatRow icon={Zap}       label={t("card_detail.speed")}   value={card.speed || "—"}     color="#60a5fa" />
+              <StatRow icon={Crosshair} label={t("card_detail.range")}   value={card.range || "—"}     color="#a78bfa" />
+              <StatRow icon={Timer}     label={t("card_detail.cadence")} value={card.attackSpeed ? `${card.attackSpeed}s` : "—"} color="#34d399" />
+              <StatRow icon={Circle}    label={t("card_detail.units")}   value={card.spawnCount || t("card_detail.spell")} color="#fbbf24" />
             </div>
           </div>
         )}

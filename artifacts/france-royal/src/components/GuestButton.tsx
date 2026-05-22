@@ -15,10 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserX, AlertTriangle } from "lucide-react";
 import { startGuestSession } from "../hooks/useGuest";
+import { useT } from "../hooks/useT";
 
 /** Button + warning dialog that creates a throwaway guest account.
  *  Mounted under the Clerk SignIn/SignUp components. */
 export default function GuestButton() {
+  const { t } = useT();
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
   const clerk = useClerk();
@@ -44,7 +46,7 @@ export default function GuestButton() {
       setOpen(false);
       setLocation("/");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("guest.unknown_error"));
       setLoading(false);
     }
   };
@@ -54,7 +56,7 @@ export default function GuestButton() {
       <div className="w-[440px] max-w-full mt-4 flex flex-col items-center">
         <div className="flex items-center gap-3 w-full">
           <div className="flex-1 h-px bg-slate-700/70" />
-          <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ou</span>
+          <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{t("guest.or")}</span>
           <div className="flex-1 h-px bg-slate-700/70" />
         </div>
         <Button
@@ -65,10 +67,10 @@ export default function GuestButton() {
           data-testid="button-guest-mode"
         >
           <UserX className="w-4 h-4 mr-2 text-fuchsia-300" />
-          Continuer en tant qu'invité
+          {t("guest.continue_full")}
         </Button>
         <p className="mt-2 text-[11px] text-slate-500 text-center leading-snug">
-          Aucune adresse email requise. Les données sont effacées au rechargement.
+          {t("guest.no_email_hint")}
         </p>
       </div>
 
@@ -77,20 +79,12 @@ export default function GuestButton() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-amber-300">
               <AlertTriangle className="w-5 h-5" />
-              Attention — mode éphémère
+              {t("guest.dialog_title")}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300 leading-relaxed pt-2 space-y-2">
-              <span className="block">
-                En continuant sans compte, un pseudo aléatoire vous sera attribué.
-              </span>
-              <span className="block font-bold text-amber-200">
-                Si vous rechargez la page ou fermez l'onglet, votre compte d'invité
-                ainsi que vos cartes, votre progression et vos decks seront définitivement
-                supprimés.
-              </span>
-              <span className="block">
-                Pour conserver votre progression, créez un compte plutôt.
-              </span>
+              <span className="block">{t("guest.warning_intro")}</span>
+              <span className="block font-bold text-amber-200">{t("guest.warning_main")}</span>
+              <span className="block">{t("guest.warning_create_account")}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error && (
@@ -100,7 +94,7 @@ export default function GuestButton() {
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={loading} className="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700">
-              Annuler
+              {t("guest.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={loading}
@@ -108,7 +102,7 @@ export default function GuestButton() {
               className="bg-gradient-to-r from-fuchsia-600 to-rose-600 hover:from-fuchsia-500 hover:to-rose-500 font-bold"
               data-testid="button-guest-confirm"
             >
-              {loading ? "Création…" : "J'ai compris, continuer"}
+              {loading ? t("guest.creating") : t("guest.confirm_understood")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

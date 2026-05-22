@@ -4,13 +4,15 @@ import CardTile from "../components/CardTile";
 import CardDetailDialog from "../components/CardDetailDialog";
 import { CARDS } from "../game/cards";
 import PageHeader from "../components/PageHeader";
+import { useT } from "../hooks/useT";
 
 export default function Collection() {
+  const { t } = useT();
   const { data: me, isLoading } = useMe();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   if (isLoading || !me) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Chargement…</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">{t("common.loading")}</div>;
   }
 
   const owned = new Set(me.cards.map((c) => c.cardId));
@@ -23,14 +25,14 @@ export default function Collection() {
 
       <div className="max-w-md mx-auto px-4 space-y-4 relative">
         <PageHeader
-          title="Collection"
-          subtitle={`${owned.size} sur ${me.allCards.length} personnalités`}
+          title={t("collection.title")}
+          subtitle={t("collection.subtitle_personalities", { owned: owned.size, total: me.allCards.length })}
         />
 
         {/* Progress bar */}
         <div className="bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-2xl p-3 shadow-[0_4px_0_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-2 text-[10px] uppercase tracking-widest font-bold">
-            <span className="text-slate-400">Progression</span>
+            <span className="text-slate-400">{t("collection.progression_label")}</span>
             <span className="text-blue-300">{pct}%</span>
           </div>
           <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -60,7 +62,7 @@ export default function Collection() {
         </div>
 
         <div className="text-xs text-slate-500 text-center">
-          Gagnez des matchs pour débloquer de nouvelles personnalités !
+          {t("collection.hint_win")}
         </div>
       </div>
 

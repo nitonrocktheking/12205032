@@ -3,6 +3,9 @@ import { ArrowLeft, Lock, Check, Trophy, Sparkles } from "lucide-react";
 import { useMe, type ProgressionEntry } from "../hooks/useMe";
 import { CARDS } from "../game/cards";
 import { Button } from "@/components/ui/button";
+import { useT } from "../hooks/useT";
+
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
 const XP_PER_WIN = 30;
 
@@ -14,12 +17,13 @@ interface Row {
 }
 
 export default function Progression() {
+  const { t } = useT();
   const { data: me, isLoading } = useMe();
 
   if (isLoading || !me) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-300">
-        Chargement…
+        {t("common.loading")}
       </div>
     );
   }
@@ -70,9 +74,9 @@ export default function Progression() {
           </Link>
           <div className="flex-1 text-center">
             <div className="text-[10px] uppercase tracking-[0.3em] text-amber-300/80 font-black">
-              Arbre de progression
+              {t("progression.header_kicker")}
             </div>
-            <h1 className="text-2xl font-black text-white">Niveaux & cartes</h1>
+            <h1 className="text-2xl font-black text-white">{t("progression.header_title")}</h1>
           </div>
           <div className="w-9" />
         </div>
@@ -94,10 +98,10 @@ export default function Progression() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                Niveau {currentLevel}
+                {t("progression.level_n", { n: currentLevel })}
               </div>
               <div className="text-sm font-black text-white">
-                {Math.round(xpIntoLevel)} / {xpPerLevel} XP
+                {t("progression.xp_n_of_m", { xp: Math.round(xpIntoLevel), max: xpPerLevel })}
               </div>
               <div className="mt-2 h-2.5 w-full rounded-full bg-slate-800 overflow-hidden border border-slate-700/60">
                 <div
@@ -107,15 +111,15 @@ export default function Progression() {
                 />
               </div>
               <div className="text-[10px] text-slate-400 font-bold mt-1">
-                {Math.max(0, xpPerLevel - Math.round(xpIntoLevel))} XP avant Niv. {currentLevel + 1}
+                {t("progression.xp_before_next", { xp: Math.max(0, xpPerLevel - Math.round(xpIntoLevel)), n: currentLevel + 1 })}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-            <Stat label="Collectées" value={`${ownedCount + me.starterCards.length}/${totalCount + me.starterCards.length}`} />
-            <Stat label="Victoires" value={String(profile.wins)} icon={<Trophy className="w-3 h-3" />} />
-            <Stat label="XP total" value={String(Math.round(profile.xp))} />
+            <Stat label={t("progression.collected")} value={`${ownedCount + me.starterCards.length}/${totalCount + me.starterCards.length}`} />
+            <Stat label={t("progression.victories")} value={String(profile.wins)} icon={<Trophy className="w-3 h-3" />} />
+            <Stat label={t("progression.total_xp")} value={String(Math.round(profile.xp))} />
           </div>
         </div>
 
@@ -123,7 +127,7 @@ export default function Progression() {
         <div className="rounded-2xl border border-slate-700/80 bg-slate-900/70 backdrop-blur-md p-3 shadow-[0_4px_0_rgba(0,0,0,0.4)]">
           <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-3 flex items-center gap-2 px-1">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            Cartes à débloquer
+            {t("progression.unlockable_cards")}
           </div>
 
           <div className="relative">
@@ -132,7 +136,7 @@ export default function Progression() {
 
             <ol className="space-y-2.5">
               {rows.map((row) => (
-                <ProgressionRow key={row.entry.cardId} row={row} />
+                <ProgressionRow key={row.entry.cardId} row={row} t={t} />
               ))}
             </ol>
           </div>
@@ -157,7 +161,7 @@ function Stat({ label, value, icon }: { label: string; value: string; icon?: Rea
   );
 }
 
-function ProgressionRow({ row }: { row: Row }) {
+function ProgressionRow({ row, t }: { row: Row; t: TFn }) {
   const { entry, status, winsAway, xpAway } = row;
   const card = CARDS[entry.cardId];
   if (!card) return null;
@@ -179,12 +183,12 @@ function ProgressionRow({ row }: { row: Row }) {
         {isOwned ? (
           <Check className="w-5 h-5 text-white" />
         ) : isNext ? (
-          <span className="text-[10px] font-black text-slate-900 uppercase">Prochain</span>
+          <span className="text-[10px] font-black text-slate-900 uppercase">{t("progression.next_pill")}</span>
         ) : (
           <Lock className="w-4 h-4 text-slate-300" />
         )}
         <span className={`text-[10px] font-black ${isOwned ? "text-emerald-100" : isNext ? "text-slate-900" : "text-slate-300"}`}>
-          Niv.{entry.level}
+          {t("progression.niv_n", { n: entry.level })}
         </span>
       </div>
 
@@ -216,12 +220,12 @@ function ProgressionRow({ row }: { row: Row }) {
           </div>
           {!isOwned && (
             <div className={`text-[10px] font-bold mt-0.5 ${isNext ? "text-amber-300" : "text-slate-400"}`}>
-              Encore {xpAway} XP · ≈ {winsAway} victoire{winsAway > 1 ? "s" : ""}
+              {t(winsAway === 1 ? "progression.xp_away_wins_one" : "progression.xp_away_wins_other", { xp: xpAway, n: winsAway })}
             </div>
           )}
           {isOwned && (
             <div className="text-[10px] font-bold mt-0.5 text-emerald-300">
-              Débloquée
+              {t("progression.card_unlocked")}
             </div>
           )}
         </div>

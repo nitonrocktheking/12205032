@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import PageHeader from "../components/PageHeader";
 import { Save } from "lucide-react";
+import { useT } from "../hooks/useT";
 
 export default function DeckEditor() {
+  const { t } = useT();
   const { data: me, isLoading } = useMe();
   const saveDeck   = useSaveDeck();
   const selectDeck = useSelectDeck();
@@ -22,7 +24,7 @@ export default function DeckEditor() {
   }, [me]);
 
   if (isLoading || !me) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Chargement…</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">{t("common.loading")}</div>;
   }
 
   const owned = me.cards.map((c) => c.cardId);
@@ -40,18 +42,18 @@ export default function DeckEditor() {
 
   const addToDeck = (id: string) => {
     if (inDeck.has(id)) return;
-    if (deck.length >= 8) { toast.error("Le deck est plein (8 cartes max)"); return; }
+    if (deck.length >= 8) { toast.error(t("deck.toast_full")); return; }
     setDeck([...deck, id]);
   };
 
   const onSave = async () => {
-    if (deck.length !== 8) { toast.error("Il faut exactement 8 cartes."); return; }
+    if (deck.length !== 8) { toast.error(t("deck.toast_exact_8")); return; }
     try {
       await saveDeck.mutateAsync({ slot, cardIds: deck });
       await selectDeck.mutateAsync(slot);
-      toast.success("Deck sauvegardé !");
+      toast.success(t("deck.toast_save_ok"));
     } catch (e: any) {
-      toast.error(e?.message || "Erreur de sauvegarde");
+      toast.error(e?.message || t("deck.toast_save_err"));
     }
   };
 
@@ -61,7 +63,7 @@ export default function DeckEditor() {
       <div className="absolute bottom-[-15%] left-[-15%] w-80 h-80 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-md mx-auto px-4 space-y-4 relative">
-        <PageHeader title="Éditeur de deck" subtitle={`Deck ${slot + 1} actif`} />
+        <PageHeader title={t("deck.title")} subtitle={t("deck.slot_n_active", { n: slot + 1 })} />
 
         <div className="flex gap-2 justify-center">
           {[0, 1, 2].map((s) => (
@@ -74,14 +76,14 @@ export default function DeckEditor() {
                   ? "bg-gradient-to-b from-blue-500 to-blue-700 border-blue-300 text-white shadow-[0_4px_0_rgba(0,0,0,0.4),0_0_18px_rgba(59,130,246,0.4)]"
                   : "bg-slate-800/70 backdrop-blur border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 shadow-[0_3px_0_rgba(0,0,0,0.4)]"}`}
             >
-              Deck {s + 1}
+              {t("deck.deck_label", { n: s + 1 })}
             </button>
           ))}
         </div>
 
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur rounded-2xl p-3 border border-slate-700/80 shadow-[0_8px_0_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Votre deck</div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("deck.your_deck")}</div>
             <div className="text-[10px] font-black">
               <span className={deck.length === 8 ? "text-emerald-300" : "text-amber-300"}>{deck.length}</span>
               <span className="text-slate-500">/8</span>
@@ -100,7 +102,7 @@ export default function DeckEditor() {
               </div>
             ))}
           </div>
-          <div className="text-[10px] text-slate-500 mt-2 text-center italic">Cliquez sur une carte pour la retirer</div>
+          <div className="text-[10px] text-slate-500 mt-2 text-center italic">{t("deck.click_to_remove")}</div>
         </div>
 
         <Button
@@ -110,12 +112,12 @@ export default function DeckEditor() {
           data-testid="button-save-deck"
         >
           <Save className="w-4 h-4 mr-2" />
-          {saveDeck.isPending ? "Sauvegarde…" : "Sauvegarder le deck"}
+          {saveDeck.isPending ? t("deck.saving") : t("deck.save_button")}
         </Button>
 
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur rounded-2xl p-3 border border-slate-700/80">
           <div className="text-[10px] uppercase tracking-widest text-slate-400 mb-2 text-center font-bold">
-            Vos cartes ({owned.length}) — cliquez pour ajouter
+            {t("deck.your_cards_count", { n: owned.length })}
           </div>
           <div className="grid grid-cols-4 gap-2 justify-items-center">
             {owned.map((id) => (

@@ -21,7 +21,9 @@ import Progression from "./pages/Progression";
 import Admin from "./pages/Admin";
 import UsernameSetup from "./pages/UsernameSetup";
 import Splash from "./pages/Splash";
+import LanguagePicker from "./components/LanguagePicker";
 import { useMe } from "./hooks/useMe";
+import { useT } from "./hooks/useT";
 import { GuestExitHandler, useIsGuest } from "./hooks/useGuest";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -94,13 +96,14 @@ const queryClient = new QueryClient();
 // a tiny placeholder so we don't flicker the inner page or the setup screen.
 function RequireUsername({ children }: { children: React.ReactNode }) {
   const { data: me, isLoading, isError } = useMe();
+  const { t } = useT();
   if (isLoading || (!me && !isError)) {
-    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">{t("common.loading")}</div>;
   }
   if (isError || !me) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-300 text-sm p-6 text-center">
-        Connexion au serveur impossible. Vérifie ta connexion puis recharge la page.
+        {t("common.server_unreachable")}
       </div>
     );
   }
@@ -115,8 +118,9 @@ function RequireUsername({ children }: { children: React.ReactNode }) {
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useUser();
   const isGuest = useIsGuest();
+  const { t } = useT();
   if (!isLoaded) {
-    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">{t("common.loading")}</div>;
   }
   if (!isSignedIn && !isGuest) return <Redirect to="/sign-in" />;
   return <RequireUsername>{children}</RequireUsername>;
@@ -125,8 +129,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function HomeRoute() {
   const { isLoaded, isSignedIn } = useUser();
   const isGuest = useIsGuest();
+  const { t } = useT();
   if (!isLoaded) {
-    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">{t("common.loading")}</div>;
   }
   // Authed (Clerk or guest) → menu behind the username gate.
   // Anonymous → landing-style menu without server fetch.
@@ -158,6 +163,7 @@ function ClerkCacheInvalidator() {
 
 function ClerkRouter() {
   const [, setLocation] = useLocation();
+  const { t } = useT();
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -166,8 +172,8 @@ function ClerkRouter() {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
-        signIn: { start: { title: "Bon retour !", subtitle: "Connectez-vous à France Royal" } },
-        signUp: { start: { title: "Rejoins l'Arène", subtitle: "Crée ton compte France Royal" } },
+        signIn: { start: { title: t("app.sign_in_title"), subtitle: t("app.sign_in_subtitle") } },
+        signUp: { start: { title: t("app.sign_up_title"), subtitle: t("app.sign_up_subtitle") } },
       }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
@@ -175,6 +181,7 @@ function ClerkRouter() {
       <QueryClientProvider client={queryClient}>
         <ClerkCacheInvalidator />
         <GuestExitHandler />
+        <LanguagePicker />
         <TooltipProvider>
           <Switch>
             <Route path="/"            component={HomeRoute} />

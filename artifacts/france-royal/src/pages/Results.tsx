@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Show } from "@clerk/react";
 import { useReportMatchResult, type MatchResultResp } from "../hooks/useMe";
 import { CARDS } from "../game/cards";
+import { useT } from "../hooks/useT";
 
 export default function Results() {
+  const { t } = useT();
   const searchParams = new URLSearchParams(window.location.search);
   const winner  = searchParams.get('winner');
   const pCrowns = searchParams.get('pCrowns');
@@ -42,10 +44,10 @@ export default function Results() {
         {/* Title */}
         <div className="text-center">
           <div className={`text-6xl font-black tracking-tight drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] ${titleColor}`}>
-            {isWin ? 'VICTOIRE' : isDraw ? 'ÉGALITÉ' : 'DÉFAITE'}
+            {isWin ? t('results.victory') : isDraw ? t('results.draw') : t('results.defeat')}
           </div>
           <div className="text-xs text-slate-500 uppercase tracking-[0.3em] mt-1 font-bold">
-            {isMP ? 'Multijoueur — 1 vs 1' : 'Partie solo'}
+            {isMP ? t('results.multiplayer') : t('results.solo')}
           </div>
         </div>
 
@@ -53,14 +55,14 @@ export default function Results() {
         <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-5 shadow-[0_8px_0_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-around">
             <div className="flex flex-col items-center gap-1">
-              <div className="text-[10px] uppercase tracking-widest text-blue-300 font-bold">Vous</div>
+              <div className="text-[10px] uppercase tracking-widest text-blue-300 font-bold">{t('results.you')}</div>
               <div className="w-16 h-16 rounded-full bg-gradient-to-b from-blue-400 to-blue-700 border-2 border-blue-300 flex items-center justify-center text-3xl font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)]">
                 {pCrowns}
               </div>
             </div>
             <div className="text-2xl font-black text-slate-600">VS</div>
             <div className="flex flex-col items-center gap-1">
-              <div className="text-[10px] uppercase tracking-widest text-red-300 font-bold">Ennemi</div>
+              <div className="text-[10px] uppercase tracking-widest text-red-300 font-bold">{t('results.enemy')}</div>
               <div className="w-16 h-16 rounded-full bg-gradient-to-b from-red-400 to-red-700 border-2 border-red-300 flex items-center justify-center text-3xl font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)]">
                 {eCrowns}
               </div>
@@ -71,8 +73,8 @@ export default function Results() {
         {/* Friendly-match banner: explicitly tell the player nothing was at stake */}
         {isFriendly && (
           <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-3 shadow-[0_4px_0_rgba(0,0,0,0.35)] text-center">
-            <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Partie entre amis</div>
-            <div className="text-xs text-slate-300 mt-1">Aucune récompense, aucune perte d&apos;XP.</div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t('results.friendly_title')}</div>
+            <div className="text-xs text-slate-300 mt-1">{t('results.friendly_subtitle')}</div>
           </div>
         )}
 
@@ -80,7 +82,7 @@ export default function Results() {
         <Show when="signed-in">
           {!isFriendly && reward && (
             <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-4 space-y-3 shadow-[0_8px_0_rgba(0,0,0,0.35)]">
-              <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center">Récompenses</div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center">{t('results.rewards')}</div>
               <div className="flex items-center justify-around text-sm font-bold">
                 <div className="flex items-center gap-1.5 text-yellow-300">
                   <span className="text-xl">🪙</span><span>{reward.goldGain >= 0 ? '+' : ''}{reward.goldGain}</span>
@@ -90,7 +92,7 @@ export default function Results() {
                 </div>
                 {reward.leveledUp && (
                   <div className="text-fuchsia-300 font-black animate-pulse">
-                    Niv. {reward.newLevel} !
+                    {t('results.level_reached', { level: reward.newLevel })}
                   </div>
                 )}
               </div>
@@ -99,8 +101,8 @@ export default function Results() {
                 <div className="border-t border-slate-700 pt-3 space-y-2">
                   <div className="text-[10px] uppercase tracking-widest text-amber-300 text-center font-bold">
                     {reward.unlockedCards.length > 1
-                      ? `${reward.unlockedCards.length} nouvelles cartes débloquées`
-                      : "Nouvelle carte débloquée"}
+                      ? t('results.n_cards_unlocked', { n: reward.unlockedCards.length })
+                      : t('results.one_card_unlocked')}
                   </div>
                   {reward.unlockedCards.filter((id) => CARDS[id]).map((id) => (
                     <div key={id} className="flex items-center gap-3 bg-slate-800/60 rounded-xl p-2.5">
@@ -127,12 +129,12 @@ export default function Results() {
             <>
               <Link href="/lobby">
                 <Button size="lg" className="w-full h-14 text-base font-bold bg-fuchsia-600 hover:bg-fuchsia-700 shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]" data-testid="button-back-to-lobby">
-                  Retour au lobby
+                  {t('results.back_to_lobby')}
                 </Button>
               </Link>
               <Link href="/">
                 <Button variant="outline" className="w-full h-12 text-sm font-bold border-slate-600 text-slate-200 hover:bg-slate-800" data-testid="button-menu">
-                  Menu principal
+                  {t('results.main_menu')}
                 </Button>
               </Link>
             </>
@@ -140,12 +142,12 @@ export default function Results() {
             <>
               <Link href="/game">
                 <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]" data-testid="button-play-again">
-                  {isWin ? 'Rejouer' : 'Réessayer'}
+                  {isWin ? t('results.play_again') : t('results.retry')}
                 </Button>
               </Link>
               <Link href="/">
                 <Button variant="outline" className="w-full h-12 text-sm font-bold border-slate-600 text-slate-200 hover:bg-slate-800" data-testid="button-menu">
-                  Menu principal
+                  {t('results.main_menu')}
                 </Button>
               </Link>
             </>
