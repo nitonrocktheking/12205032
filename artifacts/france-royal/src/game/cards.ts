@@ -41,6 +41,7 @@ import syndicatImg from "../assets/politicians/syndicat.png";
 import sncfImg from "../assets/politicians/sncf.png";
 import ouvrierImg from "../assets/politicians/ouvrier.png";
 import urssafImg from "../assets/politicians/urssaf.png";
+import immigresImg from "../assets/politicians/immigres.png";
 
 export const CARDS: Record<string, CardDef> = {
   zemmour: {
@@ -496,6 +497,15 @@ export const CARDS: Record<string, CardDef> = {
     cost: 3, color: "#a16207", label: "OUV", spawnCount: 1,
     baseHp: 700, baseDamage: 110, speed: 35, range: 28, attackSpeed: 1.3, radius: 14,
     special: "building_target", imagePath: ouvrierImg,
+  },
+
+  immigres: {
+    id: 'immigres', fullName: "Les Immigrés", name: "Vague Migratoire",
+    powerName: "Spawn Zone",
+    powerDesc: "Pendant 10s : fait apparaitre un immigré sur la zone toutes les 0.5s. Placable n'importe ou.",
+    cost: 6, color: "#0d9488", label: "IMM", spawnCount: 0,
+    baseHp: 130, baseDamage: 24, speed: 55, range: 25, attackSpeed: 0.9, radius: 11,
+    special: "immigrant_spawn", imagePath: immigresImg,
   },
 
   // ─── BOSS — admin-only, never unlocked through normal play ─────────────────

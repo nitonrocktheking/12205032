@@ -246,3 +246,9 @@ id = "cmkFCCETRXVs21Qz4JENw"
 uri = "file://artifacts/france-royal/src/assets/politicians/urssaf.png"
 type = "image"
 title = "urssaf inspector"
+
+[[generated]]
+id = "L_CGNQn2wJgz3Y0wF8vc1"
+uri = "file://artifacts/france-royal/src/assets/politicians/immigres.png"
+type = "image"
+title = "generated_image"

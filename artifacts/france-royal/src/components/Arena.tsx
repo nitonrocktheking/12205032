@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Faction, FloatingText, GameState, TaxZone } from "../game/types";
+import { Faction, FloatingText, GameState, ImmigrantSpawner, TaxZone } from "../game/types";
 import {
   ARENA_WIDTH, ARENA_HEIGHT,
   RIVER_Y, RIVER_HEIGHT,
@@ -68,6 +68,43 @@ function TaxZoneCircle({ zone, elapsedTime, localFaction, displayX, displayY }: 
   );
 }
 
+function ImmigrantZoneCircle({ zone, elapsedTime, displayX, displayY }: {
+  zone: ImmigrantSpawner; elapsedTime: number; displayX: number; displayY: number;
+}) {
+  const age = elapsedTime - zone.createdAt;
+  const remaining = Math.max(0, zone.duration - age);
+  const color = "94,234,212"; // teal
+  const fade = remaining < 2 ? 0.4 + 0.6 * (remaining / 2) : 1;
+  return (
+    <div
+      className="absolute pointer-events-none z-[7]"
+      style={{
+        left: `${displayX}%`,
+        top:  `${displayY}%`,
+        width:  `${(zone.radius * 2 / ARENA_WIDTH) * 100 * (1 - 2 * FIELD_INSET_X)}%`,
+        height: `${(zone.radius * 2 / ARENA_HEIGHT) * 100 * (1 - 2 * FIELD_INSET_Y)}%`,
+        transform: "translate(-50%, -50%)",
+        borderRadius: "50%",
+        border: `2px dashed rgba(${color},${0.9 * fade})`,
+        background: `radial-gradient(circle, rgba(20,184,166,${0.25 * fade}) 0%, rgba(13,148,136,${0.10 * fade}) 60%, transparent 100%)`,
+        boxShadow: `0 0 18px rgba(${color},${0.5 * fade})`,
+        animation: "tax-pulse 1.4s ease-in-out infinite",
+      }}
+    >
+      <div
+        className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black tracking-wider px-1.5 py-0.5 rounded"
+        style={{
+          background: `rgba(${color},0.9)`,
+          color: "#0f172a",
+          whiteSpace: "nowrap",
+        }}
+      >
+        IMMIGRÉS · {remaining.toFixed(1)}s
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   state: GameState;
   onClick: (x: number, y: number) => void;
@@ -123,18 +160,23 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
     return { wx, wy, displayY: cy };
   };
 
+  // Some spells (Les Immigrés) can be placed anywhere on the map, bypassing
+  // the usual "own half only" deployment rule.
+  const fullMapPlacement = placingCardId === 'immigres';
+
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const p = toArenaCoords(e);
     if (!p) return;
-    // Player can only deploy on their own half (bottom half in display).
-    if (p.displayY <= ARENA_HEIGHT / 2) return;
+    // Player can only deploy on their own half unless the selected spell allows full-map.
+    if (!fullMapPlacement && p.displayY <= ARENA_HEIGHT / 2) return;
     onClick(p.wx, p.wy);
   };
 
   const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!placing) return;
     const p = toArenaCoords(e);
-    if (!p || p.displayY <= ARENA_HEIGHT / 2) { setHover(null); return; }
+    if (!p) { setHover(null); return; }
+    if (!fullMapPlacement && p.displayY <= ARENA_HEIGHT / 2) { setHover(null); return; }
     setHover({ x: p.wx, y: p.wy });
   };
 
@@ -387,8 +429,20 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         />
       ))}
 
-      {/* Placement zone overlay — red tint on the enemy half (visual target indicator) */}
-      {placing && (
+      {/* Active "Les Immigrés" spawn zones */}
+      {state.immigrantSpawners.map(zone => (
+        <ImmigrantZoneCircle
+          key={zone.id}
+          zone={zone}
+          elapsedTime={state.elapsedTime}
+          displayX={displayX(zone.position.x)}
+          displayY={displayY(zone.position.y)}
+        />
+      ))}
+
+      {/* Placement zone overlay — red tint on the enemy half (visual target indicator).
+          Hidden for full-map spells like Les Immigrés. */}
+      {placing && !fullMapPlacement && (
         <div
           className="absolute pointer-events-none z-[7]"
           style={{
@@ -403,7 +457,7 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         />
       )}
 
-      {/* Hover preview — circle for tax zones, dot otherwise */}
+      {/* Hover preview — circle for tax/immigrant zones, dot otherwise */}
       {placing && hover && (
         placingCardId === 'taxe' ? (
           <div
@@ -418,6 +472,21 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
               border: "2px dashed rgba(250,204,21,0.95)",
               background: "radial-gradient(circle, rgba(250,204,21,0.22) 0%, rgba(250,204,21,0.10) 60%, transparent 100%)",
               boxShadow: "0 0 20px rgba(250,204,21,0.45)",
+            }}
+          />
+        ) : placingCardId === 'immigres' ? (
+          <div
+            className="absolute pointer-events-none z-[8]"
+            style={{
+              left: `${displayX(hover.x)}%`,
+              top:  `${displayY(hover.y)}%`,
+              width:  `${(55 * 2 / ARENA_WIDTH) * 100 * (1 - 2 * FIELD_INSET_X)}%`,
+              height: `${(55 * 2 / ARENA_HEIGHT) * 100 * (1 - 2 * FIELD_INSET_Y)}%`,
+              transform: "translate(-50%, -50%)",
+              borderRadius: "50%",
+              border: "2px dashed rgba(94,234,212,0.95)",
+              background: "radial-gradient(circle, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.12) 60%, transparent 100%)",
+              boxShadow: "0 0 20px rgba(45,212,191,0.55)",
             }}
           />
         ) : (

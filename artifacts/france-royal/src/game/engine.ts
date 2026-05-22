@@ -99,6 +99,7 @@ export const createInitialState = (
     enemyNextSpawnTime: GAME_DURATION - 10,
     floatingTexts: [],
     taxZones: [],
+    immigrantSpawners: [],
     aiDifficulty,
     aiCardPool,
     rng: stateRng,
@@ -109,6 +110,12 @@ export const createInitialState = (
 const TAX_ZONE_RADIUS = 70;
 const TAX_ZONE_DURATION = 10;
 let taxZoneCounter = 0;
+
+// "Les Immigrés" spawn zone — radius/duration/interval.
+const IMMIGRANT_ZONE_RADIUS = 55;
+const IMMIGRANT_ZONE_DURATION = 10;
+const IMMIGRANT_SPAWN_INTERVAL = 0.5;
+let immigrantSpawnerCounter = 0;
 
 // ─── Main Update Loop ─────────────────────────────────────────────────────────
 export const updateGame = (state: GameState, dt: number) => {
@@ -228,6 +235,28 @@ export const updateGame = (state: GameState, dt: number) => {
     }
   }
 
+  // ── Immigrant spawners ("Les Immigrés"): emit one immigrant unit on the
+  // zone every `interval` seconds for `duration` seconds. Auto-expires.
+  if (state.immigrantSpawners.length > 0) {
+    state.immigrantSpawners = state.immigrantSpawners.filter(
+      z => state.elapsedTime - z.createdAt < z.duration,
+    );
+    for (const z of state.immigrantSpawners) {
+      if (state.elapsedTime - z.lastSpawnAt >= z.interval) {
+        z.lastSpawnAt = state.elapsedTime;
+        const card = CARDS['immigres'];
+        if (card) {
+          const jitterX = (state.rng() - 0.5) * z.radius * 0.6;
+          const jitterY = (state.rng() - 0.5) * z.radius * 0.6;
+          spawnImmigrant(state, card, z.casterFaction, {
+            x: z.position.x + jitterX,
+            y: z.position.y + jitterY,
+          });
+        }
+      }
+    }
+  }
+
   // ── URSSAF global effect: transform opponent units into invoices and DOT them + their towers.
   if (state.urssafEffect) {
     const caster = state.urssafEffect.casterFaction;
@@ -265,6 +294,7 @@ const runEnemyAI = (state: GameState) => {
   const playable = Object.values(CARDS).filter(
     c => allowedIds.has(c.id)
       && c.special !== 'urssaf'
+      && c.special !== 'immigrant_spawn'
       && c.spawnCount > 0
       && state.elixir.enemy >= c.cost,
   );
@@ -353,6 +383,28 @@ export const playCard = (state: GameState, cardIndex: number, pos: Position): bo
 
   state.elixir.player -= card.cost;
 
+  // "Les Immigrés" — placeable anywhere on the map (full arena clamp).
+  if (card.special === 'immigrant_spawn') {
+    const spawnPosFull: Position = {
+      x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
+      y: Math.max(20, Math.min(ARENA_HEIGHT - 20, pos.y)),
+    };
+    state.immigrantSpawners.push({
+      id: `imz${++immigrantSpawnerCounter}`,
+      casterFaction: 'player',
+      position: spawnPosFull,
+      radius: IMMIGRANT_ZONE_RADIUS,
+      createdAt: state.elapsedTime,
+      duration: IMMIGRANT_ZONE_DURATION,
+      interval: IMMIGRANT_SPAWN_INTERVAL,
+      // Spawn the first one immediately on the next tick.
+      lastSpawnAt: state.elapsedTime - IMMIGRANT_SPAWN_INTERVAL,
+    });
+    addFloat(state, 'VAGUE MIGRATOIRE !', spawnPosFull, '#5eead4');
+    drawNextCard(state, cardIndex, 'player');
+    return true;
+  }
+
   const spawnPos: Position = {
     x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
     y: Math.max(ARENA_HEIGHT / 2 + 15, Math.min(ARENA_HEIGHT - 20, pos.y)),
@@ -400,6 +452,27 @@ export const playEnemyCard = (state: GameState, cardIndex: number, pos: Position
   }
 
   state.elixir.enemy -= card.cost;
+
+  // "Les Immigrés" — placeable anywhere on the map.
+  if (card.special === 'immigrant_spawn') {
+    const spawnPosFull: Position = {
+      x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
+      y: Math.max(20, Math.min(ARENA_HEIGHT - 20, pos.y)),
+    };
+    state.immigrantSpawners.push({
+      id: `imz${++immigrantSpawnerCounter}`,
+      casterFaction: 'enemy',
+      position: spawnPosFull,
+      radius: IMMIGRANT_ZONE_RADIUS,
+      createdAt: state.elapsedTime,
+      duration: IMMIGRANT_ZONE_DURATION,
+      interval: IMMIGRANT_SPAWN_INTERVAL,
+      lastSpawnAt: state.elapsedTime - IMMIGRANT_SPAWN_INTERVAL,
+    });
+    addFloat(state, 'VAGUE MIGRATOIRE !', spawnPosFull, '#5eead4');
+    drawNextCard(state, cardIndex, 'enemy');
+    return true;
+  }
 
   const spawnPos: Position = {
     x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
@@ -453,6 +526,26 @@ function drawNextCard(state: GameState, cardIndex: number, faction: Faction) {
 
 // ─── Spawn ────────────────────────────────────────────────────────────────────
 let unitCounter = 0;
+
+// One immigrant unit spawned by an active "Les Immigrés" zone. Uses the
+// card's combat stats but spawns a single weak unit per tick.
+const spawnImmigrant = (state: GameState, card: CardDef, faction: Faction, pos: Position) => {
+  state.units.push({
+    id: `u${++unitCounter}`,
+    type: card.id,
+    name: card.fullName,
+    faction,
+    hp: card.baseHp, maxHp: card.baseHp, damage: card.baseDamage,
+    speed: card.speed, baseSpeed: card.speed, speedMult: 1,
+    range: card.range, attackSpeed: card.attackSpeed, lastAttackTime: Infinity,
+    position: { x: pos.x, y: pos.y },
+    label: card.label,
+    color: faction === 'player' ? '#2563eb' : '#dc2626',
+    radius: card.radius,
+    imagePath: card.imagePath,
+    spawnTime: state.elapsedTime,
+  });
+};
 
 const spawnUnit = (state: GameState, card: CardDef, faction: Faction, pos: Position) => {
   if (card.special === 'steal_elixir') {

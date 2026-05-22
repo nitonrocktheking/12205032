@@ -13,6 +13,8 @@ export const ALL_CARDS = [
   // Groupes / corps de métier
   "crs", "agriculteur", "pompier", "journaliste", "lyceen", "taxi",
   "syndicat", "sncf", "ouvrier",
+  // Sorts de zone
+  "immigres",
   // Admin-only boss cards (never randomly unlocked)
   "urssaf",
 ] as const;

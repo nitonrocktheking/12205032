@@ -94,6 +94,9 @@ export interface GameState {
   // Active "Impôt" perimeters. Each enemy unit that enters drains 1 elixir
   // from its faction (once per zone). Auto-expires after `duration`.
   taxZones: TaxZone[];
+  // Active "Les Immigrés" spawn zones. While active, spawns an immigrant
+  // unit at `position` every `interval` seconds for the caster's faction.
+  immigrantSpawners: ImmigrantSpawner[];
   // Solo AI tuning. 0 = beginner (random, slow), 1 = expert (reactive, hoards
   // elixir, prefers high-cost cards). Computed once from the player's level.
   aiDifficulty: number;
@@ -114,6 +117,17 @@ export interface TaxZone {
   createdAt: number;   // elapsedTime
   duration: number;    // seconds
   drainedIds: string[];
+}
+
+export interface ImmigrantSpawner {
+  id: string;
+  casterFaction: Faction;
+  position: Position;
+  radius: number;
+  createdAt: number;   // elapsedTime
+  duration: number;    // seconds
+  interval: number;    // seconds between each spawn
+  lastSpawnAt: number; // elapsedTime of last spawn
 }
 
 export interface FloatingText {
