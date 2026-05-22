@@ -355,9 +355,9 @@ export const CARDS: Record<string, CardDef> = {
   },
   louis14: {
     id: 'louis14', fullName: "Louis XIV", name: "Le Roi Soleil",
-    powerName: "L'État c'est moi", powerDesc: "Tank ultime, lent et impitoyable",
-    cost: 7, color: "#a16207", label: "L14", spawnCount: 1,
-    baseHp: 2800, baseDamage: 180, speed: 22, range: 50, attackSpeed: 1.5, radius: 22,
+    powerName: "L'État c'est moi", powerDesc: "Tank lourd, lent et imposant",
+    cost: 8, color: "#a16207", label: "L14", spawnCount: 1,
+    baseHp: 1800, baseDamage: 110, speed: 22, range: 45, attackSpeed: 1.8, radius: 22,
     imagePath: louis14Img,
   },
   robespierre: {

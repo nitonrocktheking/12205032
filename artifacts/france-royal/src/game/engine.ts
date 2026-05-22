@@ -96,7 +96,10 @@ export const updateGame = (state: GameState, dt: number) => {
   // Elixir
   state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
   if (!state.isMultiplayer) {
-    state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * 0.7 * dt);
+    // Solo AI: regenerates almost as fast as the player (slight handicap only).
+    // Double-speed mode kicks in during the last 30s, like Clash Royale overtime.
+    const aiRegenMult = state.timeRemaining < 30 ? 1.5 : 0.95;
+    state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * aiRegenMult * dt);
   } else {
     state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * dt);
   }
@@ -104,21 +107,9 @@ export const updateGame = (state: GameState, dt: number) => {
   // Solo AI (disabled in multiplayer).
   // Boss/admin-only cards (URSSAF) are excluded so the AI never wastes elixir on a spell it can't use.
   if (!state.isMultiplayer && state.timeRemaining <= state.enemyNextSpawnTime) {
-    const allCards = Object.values(CARDS).filter(c => c.special !== 'urssaf' && c.spawnCount > 0);
-    const weighted: CardDef[] = [];
-    for (const c of allCards) {
-      const w = c.cost <= 3 ? 3 : c.cost <= 5 ? 2 : 1;
-      for (let i = 0; i < w; i++) weighted.push(c);
-    }
-    const card = weighted[Math.floor(Math.random() * weighted.length)];
-    if (state.elixir.enemy >= card.cost) {
-      state.elixir.enemy -= card.cost;
-      spawnUnit(state, card, 'enemy', {
-        x: 80 + Math.random() * (ARENA_WIDTH - 160),
-        y: 155,
-      });
-    }
-    state.enemyNextSpawnTime = state.timeRemaining - (8 + Math.random() * 6);
+    runEnemyAI(state);
+    // Faster decision cadence than before: 3-6s between plays (was 8-14s).
+    state.enemyNextSpawnTime = state.timeRemaining - (3 + Math.random() * 3);
   }
 
   // Reset speed mults
@@ -232,6 +223,76 @@ export const updateGame = (state: GameState, dt: number) => {
 
   if (state.towers.find(t => t.type === 'king' && t.hp <= 0)) checkWinCondition(state);
 };
+
+// ─── Solo AI ──────────────────────────────────────────────────────────────────
+// Smarter than the previous random-weighted pick: the AI now reacts to player
+// pushes, holds elixir for bigger plays when safe, and picks lanes deliberately.
+const runEnemyAI = (state: GameState) => {
+  const playable = Object.values(CARDS).filter(
+    c => c.special !== 'urssaf' && c.spawnCount > 0 && state.elixir.enemy >= c.cost,
+  );
+  if (playable.length === 0) return;
+
+  // Find the strongest player threat on the AI's side of the river.
+  const threats = state.units.filter(
+    u => u.faction === 'player' && u.hp > 0 && u.position.y <= RIVER_Y + 40,
+  );
+  const biggestThreat = threats.length === 0
+    ? null
+    : threats.reduce((a, b) => (a.hp + a.damage * 2 > b.hp + b.damage * 2 ? a : b));
+
+  // Hoard elixir for a stronger play unless threatened or already capped.
+  const elx = state.elixir.enemy;
+  if (!biggestThreat && elx < MAX_ELIXIR - 0.5) {
+    if (elx < 4) return; // too poor, save up
+    // 35% chance to skip and wait for a fatter wallet, even if a cheap card is available.
+    if (elx < 7 && Math.random() < 0.35) return;
+  }
+
+  // Pick a card. If there's a threat, prefer a hard counter (cheap + decent dmg).
+  // Otherwise, favor expensive cards proportional to current elixir.
+  let card: CardDef;
+  if (biggestThreat) {
+    const counters = playable
+      .filter(c => c.cost <= Math.max(4, Math.floor(elx)))
+      .sort((a, b) => (b.baseDamage * b.spawnCount) - (a.baseDamage * a.spawnCount));
+    card = counters[0] ?? playable[Math.floor(Math.random() * playable.length)];
+  } else {
+    const sorted = [...playable].sort((a, b) => b.cost - a.cost);
+    // Skew toward the most expensive affordable cards.
+    const pickIdx = Math.floor(Math.pow(Math.random(), 2) * sorted.length);
+    card = sorted[pickIdx];
+  }
+
+  // Choose lane. If threat exists, drop the counter right on top of it.
+  // Otherwise, push the weakest player lane (princess tower with least HP, or king if both down).
+  let spawnX: number;
+  let spawnY: number;
+  if (biggestThreat) {
+    spawnX = clamp(biggestThreat.position.x, 30, ARENA_WIDTH - 30);
+    // Drop slightly behind the threat (toward AI's side) so the counter can engage.
+    spawnY = clamp(biggestThreat.position.y - 25, 50, RIVER_Y - 20);
+  } else {
+    const playerPrincesses = state.towers.filter(
+      t => t.faction === 'player' && t.type === 'princess' && t.hp > 0,
+    );
+    let target: Tower | undefined;
+    if (playerPrincesses.length > 0) {
+      target = playerPrincesses.reduce((a, b) => (a.hp <= b.hp ? a : b));
+    } else {
+      target = state.towers.find(t => t.faction === 'player' && t.type === 'king' && t.hp > 0);
+    }
+    // Spawn on the AI side, aligned with the chosen lane.
+    spawnX = target ? clamp(target.position.x + (Math.random() - 0.5) * 30, 30, ARENA_WIDTH - 30)
+                    : 80 + Math.random() * (ARENA_WIDTH - 160);
+    spawnY = 120 + Math.random() * 40;
+  }
+
+  state.elixir.enemy -= card.cost;
+  spawnUnit(state, card, 'enemy', { x: spawnX, y: spawnY });
+};
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // ─── Play Card (player faction) ───────────────────────────────────────────────
 export const playCard = (state: GameState, cardIndex: number, pos: Position): boolean => {
