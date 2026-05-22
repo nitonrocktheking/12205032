@@ -23,43 +23,42 @@ function UserBar() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900/95 to-slate-800/80 backdrop-blur-md p-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {/* Level avatar with rotating ring */}
-          <div className="relative w-12 h-12 shrink-0">
-            <div
-              className="absolute inset-0 rounded-full p-[2px]"
-              style={{
-                background: `conic-gradient(from -90deg, #3b82f6 0%, #a855f7 ${xpPct}%, rgba(255,255,255,0.08) ${xpPct}%, rgba(255,255,255,0.08) 100%)`,
-              }}
-            >
-              <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center font-black text-white text-base shadow-inner">
-                {me.profile.level}
-              </div>
-            </div>
-          </div>
-          <div className="min-w-0">
-            <div className="font-black text-white text-sm leading-tight truncate" data-testid="text-username">
-              {me.profile.displayName ?? t("menu.level_fallback", { level: me.profile.level })}
-            </div>
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mt-0.5">
-              <span>{t("common.level_short")} {me.profile.level}</span>
-              <span className="text-slate-600">·</span>
-              <span className="inline-flex items-center gap-0.5 text-emerald-300">
-                <Trophy className="w-3 h-3" />{me.profile.wins}{t("menu.wins_short")}
-              </span>
-              <span className="text-slate-600">·</span>
-              <span>{me.profile.losses}{t("menu.losses_short")}</span>
-              <span className="text-slate-600">·</span>
-              <span>{Math.round(xpIntoLevel)}/{xpPerLevel} XP</span>
+      <div className="flex items-center gap-2.5">
+        {/* Level avatar with XP ring (ring already conveys XP progress) */}
+        <div className="relative w-11 h-11 shrink-0" title={`${Math.round(xpIntoLevel)}/${xpPerLevel} XP`}>
+          <div
+            className="absolute inset-0 rounded-full p-[2px]"
+            style={{
+              background: `conic-gradient(from -90deg, #3b82f6 0%, #a855f7 ${xpPct}%, rgba(255,255,255,0.08) ${xpPct}%, rgba(255,255,255,0.08) 100%)`,
+            }}
+          >
+            <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center font-black text-white text-base shadow-inner">
+              {me.profile.level}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="inline-flex items-center gap-1.5 px-2.5 h-9 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-black text-sm shadow-[0_3px_0_rgba(0,0,0,0.4)]">
-            <Coins className="w-3.5 h-3.5" />
-            <span data-testid="text-gold">{me.profile.gold}</span>
+
+        {/* Identity + compact stats — flex-1 so it absorbs any overflow via truncate */}
+        <div className="min-w-0 flex-1">
+          <div className="font-black text-white text-sm leading-tight truncate" data-testid="text-username">
+            {me.profile.displayName ?? t("menu.level_fallback", { level: me.profile.level })}
           </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold mt-0.5">
+            <span className="inline-flex items-center gap-0.5 text-emerald-300">
+              <Trophy className="w-3 h-3" />{me.profile.wins}{t("menu.wins_short")}
+            </span>
+            <span className="text-slate-600">·</span>
+            <span>{me.profile.losses}{t("menu.losses_short")}</span>
+            <span className="text-slate-600">·</span>
+            <span className="inline-flex items-center gap-0.5 text-amber-300/90">
+              <Coins className="w-3 h-3" />
+              <span data-testid="text-gold">{me.profile.gold}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Actions — kept tight to the right edge */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <LanguageSwitcher />
           <LogoutButton />
         </div>
