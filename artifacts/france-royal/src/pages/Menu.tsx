@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Show } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
+import { useIsGuest } from "../hooks/useGuest";
 import CardTile from "../components/CardTile";
 import { getArenaForLevel, getNextArena } from "../game/arenas";
 import LogoutButton from "../components/LogoutButton";
@@ -123,6 +124,11 @@ function DeckPreview() {
 
 export default function Menu() {
   const [, setLocation] = useLocation();
+  const { isSignedIn } = useUser();
+  const isGuest = useIsGuest();
+  // Treat both Clerk users and guest-cookie sessions as authenticated so
+  // guests see the full Play/Collection/Deck/Progression UI.
+  const isAuthed = !!isSignedIn || isGuest;
   useEffect(() => {
     try {
       if (!localStorage.getItem(SPLASH_SEEN_KEY)) setLocation("/splash");
@@ -176,7 +182,7 @@ export default function Menu() {
           </p>
         </div>
 
-        <Show when="signed-out">
+        {!isAuthed && (
           <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-4 space-y-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
             <p className="text-sm text-slate-300 text-center">Connectez-vous pour jouer, collectionner et bâtir votre deck.</p>
             <Link href="/sign-in">
@@ -190,12 +196,13 @@ export default function Menu() {
               </Button>
             </Link>
             <p className="text-[10px] text-slate-500 text-center pt-1">
-              Pseudo + mot de passe, ou Google.
+              Pseudo + mot de passe, ou Google. Ou continuez en invité.
             </p>
           </div>
-        </Show>
+        )}
 
-        <Show when="signed-in">
+        {isAuthed && (
+          <>
           <UserBar />
           <ArenaBadge />
           <DeckPreview />
@@ -264,7 +271,8 @@ export default function Menu() {
               </Button>
             </Link>
           </div>
-        </Show>
+          </>
+        )}
       </div>
     </div>
   );

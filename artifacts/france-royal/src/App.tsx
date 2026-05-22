@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ClerkProvider, Show, useClerk } from "@clerk/react";
+import { ClerkProvider, Show, useClerk, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +22,7 @@ import Admin from "./pages/Admin";
 import UsernameSetup from "./pages/UsernameSetup";
 import Splash from "./pages/Splash";
 import { useMe } from "./hooks/useMe";
+import { GuestExitHandler, useIsGuest } from "./hooks/useGuest";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -109,63 +110,36 @@ function RequireUsername({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function HomeRoute() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Menu /></RequireUsername></Show>
-      <Show when="signed-out"><Menu /></Show>
-    </>
-  );
+// Auth gate that accepts both Clerk-signed-in users AND guest-session users.
+// Renders the child page only once authed; otherwise redirects to /sign-in.
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn } = useUser();
+  const isGuest = useIsGuest();
+  if (!isLoaded) {
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+  }
+  if (!isSignedIn && !isGuest) return <Redirect to="/sign-in" />;
+  return <RequireUsername>{children}</RequireUsername>;
 }
 
-function GuardedGame() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Game /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
+function HomeRoute() {
+  const { isLoaded, isSignedIn } = useUser();
+  const isGuest = useIsGuest();
+  if (!isLoaded) {
+    return <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-500 text-sm">Chargement…</div>;
+  }
+  // Authed (Clerk or guest) → menu behind the username gate.
+  // Anonymous → landing-style menu without server fetch.
+  if (isSignedIn || isGuest) return <RequireUsername><Menu /></RequireUsername>;
+  return <Menu />;
 }
-function GuardedLobby() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Lobby /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
-}
-function GuardedPlay() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Play /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
-}
-function GuardedCollection() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Collection /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
-}
-function GuardedDeckEditor() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><DeckEditor /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
-}
-function GuardedProgression() {
-  return (
-    <>
-      <Show when="signed-in"><RequireUsername><Progression /></RequireUsername></Show>
-      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
-    </>
-  );
-}
+
+function GuardedGame()        { return <RequireAuth><Game /></RequireAuth>; }
+function GuardedLobby()       { return <RequireAuth><Lobby /></RequireAuth>; }
+function GuardedPlay()        { return <RequireAuth><Play /></RequireAuth>; }
+function GuardedCollection()  { return <RequireAuth><Collection /></RequireAuth>; }
+function GuardedDeckEditor()  { return <RequireAuth><DeckEditor /></RequireAuth>; }
+function GuardedProgression() { return <RequireAuth><Progression /></RequireAuth>; }
 
 function ClerkCacheInvalidator() {
   const { addListener } = useClerk();
@@ -200,6 +174,7 @@ function ClerkRouter() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkCacheInvalidator />
+        <GuestExitHandler />
         <TooltipProvider>
           <Switch>
             <Route path="/"            component={HomeRoute} />
@@ -212,8 +187,7 @@ function ClerkRouter() {
             <Route path="/deck"        component={GuardedDeckEditor} />
             <Route path="/progression" component={GuardedProgression} />
             <Route path="/results">
-              <Show when="signed-in"><RequireUsername><Results /></RequireUsername></Show>
-              <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+              <RequireAuth><Results /></RequireAuth>
             </Route>
             <Route path="/admin"       component={Admin} />
             <Route path="/splash"      component={Splash} />

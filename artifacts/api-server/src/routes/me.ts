@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db, userProfilesTable, userCardsTable, userDecksTable } from "@workspace/db";
 import { ALL_CARDS, STARTER_CARDS, isValidCardId } from "../lib/cardsCatalog";
+import { GUEST_COOKIE, verifyGuestToken } from "../lib/guestSession";
 import {
   UNLOCK_PROGRESSION,
   levelFromXp,
@@ -17,13 +18,23 @@ interface AuthedRequest extends Request {
 
 const requireAuth = (req: AuthedRequest, res: Response, next: NextFunction) => {
   const auth = getAuth(req);
-  const userId = auth?.sessionClaims?.userId as string | undefined ?? auth?.userId;
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
+  const clerkUserId = auth?.sessionClaims?.userId as string | undefined ?? auth?.userId;
+  if (clerkUserId) {
+    req.userId = clerkUserId;
+    next();
     return;
   }
-  req.userId = userId;
-  next();
+  // Fallback to guest cookie. The signed token in `frg_guest_session` proves
+  // the bearer owns that guest userId. We never call ensureProvisioned for
+  // guests because the row only exists if /auth/guest already created it.
+  const guestToken = (req.cookies as Record<string, string> | undefined)?.[GUEST_COOKIE];
+  const guestUserId = verifyGuestToken(guestToken);
+  if (guestUserId) {
+    req.userId = guestUserId;
+    next();
+    return;
+  }
+  res.status(401).json({ error: "Unauthorized" });
 };
 
 // Blocks progression/economy mutations until the player has picked a unique pseudo.
@@ -45,6 +56,12 @@ async function requireUsernameSet(userId: string, res: Response): Promise<boolea
 // displayName is intentionally left NULL — the client must collect it via /username-setup
 // before allowing any further interaction. Most routes still operate without a displayName.
 async function ensureProvisioned(userId: string) {
+  // Guests are provisioned up-front by /auth/guest (and have a generated
+  // displayName already). Skip JIT provisioning here — if the row was deleted
+  // by /auth/guest/end, we want the next /api/me to 404 rather than recreate
+  // an empty profile under the same id.
+  if (userId.startsWith("guest_")) return;
+
   const existing = await db.select().from(userProfilesTable).where(eq(userProfilesTable.clerkUserId, userId)).limit(1);
   if (existing.length > 0) return;
 
