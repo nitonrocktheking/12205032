@@ -102,12 +102,16 @@ function LobbySession({
 // ─── Main lobby ───────────────────────────────────────────────────────────────
 type Mode = null | "create" | { type: "join_input" } | { type: "join_session"; code: string };
 
+const MP_FORBIDDEN_CARDS = new Set(["urssaf"]);
+
 export default function Lobby() {
   const [mode, setMode]       = useState<Mode>(null);
   const [joinCode, setJoinCode] = useState("");
   const { data: me } = useMe();
   const selected = getSelectedDeck(me);
   const deck = selected && selected.length === 8 ? selected : undefined;
+  const forbiddenInDeck = (deck ?? []).filter((id) => MP_FORBIDDEN_CARDS.has(id));
+  const deckBlocked = forbiddenInDeck.length > 0;
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white relative overflow-hidden">
@@ -129,16 +133,25 @@ export default function Lobby() {
         {/* Mode selection */}
         {mode === null && (
           <div className="space-y-3">
+            {deckBlocked && (
+              <div className="bg-red-900/40 border border-red-500 text-red-200 rounded-xl p-4 text-sm text-center font-medium">
+                La carte <span className="font-black">URSSAF</span> est interdite en multijoueur.
+                <br />
+                Retirez-la de votre deck pour pouvoir jouer en ligne.
+              </div>
+            )}
             <Button
-              className="w-full h-14 bg-blue-600 hover:bg-blue-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="button-create-room"
+              disabled={deckBlocked}
               onClick={() => setMode("create")}
             >
               Créer une salle
             </Button>
             <Button
-              className="w-full h-14 bg-fuchsia-600 hover:bg-fuchsia-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+              className="w-full h-14 bg-fuchsia-600 hover:bg-fuchsia-700 font-black uppercase tracking-wide text-base shadow-[0_6px_0_rgba(0,0,0,0.4)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="button-join-room"
+              disabled={deckBlocked}
               onClick={() => setMode({ type: "join_input" })}
             >
               Rejoindre une salle

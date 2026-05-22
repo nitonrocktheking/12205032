@@ -43,6 +43,14 @@ function parseDeck(raw: unknown): string[] | null {
   return out;
 }
 
+// Cards forbidden in multiplayer (currently the URSSAF boss spell — it's an
+// admin-only nuke that trivializes any 1v1).
+const MP_FORBIDDEN_CARDS = new Set(["urssaf"]);
+function deckHasForbidden(deck: string[] | null): boolean {
+  if (!deck) return false;
+  return deck.some((id) => MP_FORBIDDEN_CARDS.has(id));
+}
+
 // If only one peer reports game_over, wait this long for the other before
 // accepting the lone report. Prevents a malicious peer from instantly forging
 // a result, while still finishing the match if the opponent really crashed.
@@ -93,9 +101,13 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
         const msg = JSON.parse(raw.toString()) as Record<string, unknown>;
 
         if (msg.type === "create_room") {
+          const hostDeck = parseDeck(msg.deck);
+          if (deckHasForbidden(hostDeck)) {
+            send(ws, { type: "error", message: "La carte URSSAF est interdite en multijoueur. Retirez-la de votre deck." });
+            return;
+          }
           const code = genCode();
           const seed = Math.floor(Math.random() * 1_000_000);
-          const hostDeck = parseDeck(msg.deck);
           rooms.set(code, {
             code, seed, players: [ws, null], decks: [hostDeck, null],
             deleteTimer: null,
@@ -113,9 +125,15 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
           if (!room) { send(ws, { type: "error", message: "Salle introuvable." }); return; }
           if (room.players[1]) { send(ws, { type: "error", message: "Salle déjà pleine." }); return; }
 
+          const guestDeck = parseDeck(msg.deck);
+          if (deckHasForbidden(guestDeck)) {
+            send(ws, { type: "error", message: "La carte URSSAF est interdite en multijoueur. Retirez-la de votre deck." });
+            return;
+          }
+
           cancelDeleteTimer(room);
           room.players[1] = ws;
-          room.decks[1] = parseDeck(msg.deck);
+          room.decks[1] = guestDeck;
           roomCode = code;
           playerIndex = 1;
           send(ws, { type: "room_joined", code, seed: room.seed, faction: "enemy" });
