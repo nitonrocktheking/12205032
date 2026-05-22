@@ -7,7 +7,7 @@ import CardTile from "../components/CardTile";
 import { getArenaForLevel, getNextArena } from "../game/arenas";
 import LogoutButton from "../components/LogoutButton";
 import { SPLASH_SEEN_KEY } from "./Splash";
-import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle, TrendingUp } from "lucide-react";
+import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle, TrendingUp, Users } from "lucide-react";
 
 function UserBar() {
   const { data: me } = useMe();
@@ -201,24 +201,24 @@ export default function Menu() {
           <DeckPreview />
 
           <div className="space-y-2 pt-1">
-            <Link href="/game">
+            <Link href="/play">
               <Button
                 size="lg"
-                className="group relative w-full h-14 text-base font-black uppercase tracking-wide bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-[0_6px_0_rgba(0,0,0,0.4),0_0_24px_rgba(59,130,246,0.35)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)] border border-blue-400/30"
-                data-testid="button-start-solo"
+                className="group relative w-full h-16 text-lg font-black uppercase tracking-wide bg-gradient-to-r from-blue-600 via-fuchsia-600 to-rose-600 hover:from-blue-500 hover:via-fuchsia-500 hover:to-rose-500 shadow-[0_6px_0_rgba(0,0,0,0.4),0_0_28px_rgba(217,70,239,0.35)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)] border border-white/15 text-white"
+                data-testid="button-play"
               >
-                <Swords className="w-5 h-5 mr-2 transition-transform group-hover:rotate-12" />
-                Solo — vs IA
+                <Swords className="w-6 h-6 mr-2 transition-transform group-hover:rotate-12" />
+                Jouer
               </Button>
             </Link>
             <Link href="/lobby">
               <Button
-                size="lg"
-                className="group relative w-full h-14 text-base font-black uppercase tracking-wide bg-gradient-to-r from-fuchsia-600 to-purple-700 hover:from-fuchsia-500 hover:to-purple-600 shadow-[0_6px_0_rgba(0,0,0,0.4),0_0_24px_rgba(217,70,239,0.35)] active:translate-y-[3px] active:shadow-[0_3px_0_rgba(0,0,0,0.4)] border border-fuchsia-400/30 text-white"
-                data-testid="button-start-multiplayer"
+                variant="outline"
+                className="w-full h-10 text-xs font-bold border-fuchsia-700/60 bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 hover:border-fuchsia-500 shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+                data-testid="button-private-room"
               >
-                <Globe2 className="w-5 h-5 mr-2 transition-transform group-hover:scale-110" />
-                Multijoueur 1v1
+                <Users className="w-3.5 h-3.5 mr-1.5" />
+                Salle privée (jouer avec un ami)
               </Button>
             </Link>
             <div className="grid grid-cols-2 gap-2">

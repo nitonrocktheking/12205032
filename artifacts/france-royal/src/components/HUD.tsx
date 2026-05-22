@@ -2,7 +2,15 @@ import { Faction, GameState } from "../game/types";
 import { MAX_ELIXIR } from "../game/constants";
 import { ArenaTheme } from "../game/arenas";
 
-export default function HUD({ state, localFaction = "player", arena }: { state: GameState; localFaction?: Faction; arena?: ArenaTheme }) {
+interface HUDProps {
+  state: GameState;
+  localFaction?: Faction;
+  arena?: ArenaTheme;
+  localName?: string;
+  opponentName?: string;
+}
+
+export default function HUD({ state, localFaction = "player", arena, localName, opponentName }: HUDProps) {
   // Crowns = enemy towers destroyed (towers belonging to the opposing faction)
   const myCrowns  = state.towers.filter(t => t.faction !== localFaction && t.hp <= 0).length;
   const oppCrowns = state.towers.filter(t => t.faction === localFaction  && t.hp <= 0).length;
@@ -18,6 +26,21 @@ export default function HUD({ state, localFaction = "player", arena }: { state: 
 
   return (
     <div className="bg-slate-900/95 backdrop-blur border-b border-slate-800 z-50 px-3 pt-2 pb-2.5">
+      {/* Names row */}
+      {(localName || opponentName) && (
+        <div className="flex items-center justify-between mb-1.5 text-[11px] font-black uppercase tracking-wide">
+          <div className="flex items-center gap-1.5 max-w-[42%] min-w-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
+            <span className="text-blue-200 truncate" data-testid="text-local-name">{localName ?? "Vous"}</span>
+          </div>
+          <span className="text-slate-600 text-[9px] tracking-[0.3em]">VS</span>
+          <div className="flex items-center gap-1.5 max-w-[42%] min-w-0 justify-end">
+            <span className="text-rose-200 truncate text-right" data-testid="text-opponent-name">{opponentName ?? "Adversaire"}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 shadow-[0_0_6px_rgba(251,113,133,0.8)]" />
+          </div>
+        </div>
+      )}
+
       {/* Top row: crowns + arena name + timer */}
       <div className="flex items-center justify-between mb-2">
         {/* Crowns left */}

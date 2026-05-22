@@ -7,7 +7,8 @@ export type MPMessage =
   | { type: "opponent_play_card"; cardIndex: number; x: number; y: number }
   | { type: "match_finalized"; winner: "player" | "enemy" | "draw"; pCrowns: number; eCrowns: number }
   | { type: "opponent_left" }
-  | { type: "rejoined"; code: string; faction: "player" | "enemy"; hostDeck: string[] | null; joinerDeck: string[] | null }
+  | { type: "match_found"; code: string; seed: number; faction: "player" | "enemy"; opponentName: string }
+  | { type: "rejoined"; code: string; faction: "player" | "enemy"; hostDeck: string[] | null; joinerDeck: string[] | null; opponentName: string | null }
   | { type: "error"; message: string };
 
 interface Options {
@@ -43,10 +44,15 @@ export function useMultiplayer({ onMessage, onOpen, onClose }: Options) {
     }
   }, []);
 
-  const createRoom = useCallback((deck?: string[]) => send({ type: "create_room", deck }), [send]);
-  const joinRoom   = useCallback((code: string, deck?: string[]) => send({ type: "join_room", code, deck }), [send]);
-  const rejoinRoom = useCallback((code: string, faction: "player" | "enemy", deck?: string[]) =>
-    send({ type: "rejoin_room", code, faction, deck }), [send]);
+  const createRoom = useCallback((deck?: string[], displayName?: string) =>
+    send({ type: "create_room", deck, displayName }), [send]);
+  const joinRoom   = useCallback((code: string, deck?: string[], displayName?: string) =>
+    send({ type: "join_room", code, deck, displayName }), [send]);
+  const rejoinRoom = useCallback((code: string, faction: "player" | "enemy", deck?: string[], displayName?: string) =>
+    send({ type: "rejoin_room", code, faction, deck, displayName }), [send]);
+  const findMatch = useCallback((deck?: string[], displayName?: string) =>
+    send({ type: "find_match", deck, displayName }), [send]);
+  const cancelMatch = useCallback(() => send({ type: "cancel_match" }), [send]);
   const sendPlayCard = useCallback((cardIndex: number, x: number, y: number) =>
     send({ type: "play_card", cardIndex, x, y }), [send]);
   const sendGameOver = useCallback(
@@ -55,5 +61,5 @@ export function useMultiplayer({ onMessage, onOpen, onClose }: Options) {
     [send],
   );
 
-  return { createRoom, joinRoom, rejoinRoom, sendPlayCard, sendGameOver };
+  return { createRoom, joinRoom, rejoinRoom, findMatch, cancelMatch, sendPlayCard, sendGameOver };
 }

@@ -9,19 +9,21 @@ import HUD from "../components/HUD";
 import CardHand from "../components/CardHand";
 import { useMultiplayer } from "../hooks/useMultiplayer";
 import { useMe, getSelectedDeck } from "../hooks/useMe";
+import { randomAiUsername } from "../game/aiNames";
 
 function parseParams() {
   const p = new URLSearchParams(window.location.search);
   const seedStr = p.get("seed");
   const faction = p.get("faction") as Faction | null;
   const code = p.get("code");
+  const opp = p.get("opp");
   const seed = seedStr !== null ? Number(seedStr) : undefined;
   const isMultiplayer = seed !== undefined;
   const localFaction: Faction = faction === "enemy" ? "enemy" : "player";
-  return { seed, isMultiplayer, localFaction, roomCode: code };
+  return { seed, isMultiplayer, localFaction, roomCode: code, opponentNameParam: opp };
 }
 
-function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[] }) {
+function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds, localName, opponentNameParam }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[]; localName: string; opponentNameParam: string | null }) {
   const [, setLocation] = useLocation();
   // Solo state is built immediately from the player's selected deck. MP state
   // waits until the server returns BOTH decks (via `rejoined`) so both peers
@@ -34,6 +36,14 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   const [mpReady, setMpReady] = useState<boolean>(!isMultiplayer);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [opponentLeft, setOpponentLeft] = useState(false);
+  // Opponent display name. Solo: a randomly-picked French-politician-style
+  // username. MP: comes from the matchmaking URL param, then refined by the
+  // server's `rejoined` payload (authoritative).
+  const aiNameRef = useRef<string>("");
+  if (!aiNameRef.current && !isMultiplayer) aiNameRef.current = randomAiUsername();
+  const [opponentName, setOpponentName] = useState<string>(
+    isMultiplayer ? (opponentNameParam ?? "Adversaire") : aiNameRef.current
+  );
   // Authoritative MP outcome agreed between the two peers. First peer to
   // detect a winner broadcasts it; receiver locks in the same result so both
   // sides never disagree on who actually won.
@@ -49,6 +59,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   const { sendPlayCard, rejoinRoom, sendGameOver } = useMultiplayer({
     onMessage: (msg) => {
       if (msg.type === "rejoined" && isMultiplayer) {
+        // Server has the authoritative opponent name — adopt it over the URL hint.
+        if (msg.opponentName) setOpponentName(msg.opponentName);
         // Both decks arrived from the server — build the shared initial state
         // now (same inputs on both peers → identical state, identical RNG).
         if (gameStateRef.current) return; // already built
@@ -89,7 +101,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
       // faction. Re-send our own deck so the server can recover if the original
       // create/join message was lost.
       if (isMultiplayer && roomCode) {
-        rejoinRoom(roomCode, localFaction, deck);
+        rejoinRoom(roomCode, localFaction, deck, localName);
       }
     },
   });
@@ -272,7 +284,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
         </div>
       )}
 
-      <HUD state={renderState} localFaction={localFaction} arena={arena} />
+      <HUD state={renderState} localFaction={localFaction} arena={arena} localName={localName} opponentName={opponentName} />
       <div className="flex-1 relative min-h-0">
         <Arena
           state={renderState}
@@ -296,7 +308,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 }
 
 export default function Game() {
-  const { seed, isMultiplayer, localFaction, roomCode } = parseParams();
+  const { seed, isMultiplayer, localFaction, roomCode, opponentNameParam } = parseParams();
   const { data: me, isLoading } = useMe();
 
   // Wait for user data before initializing — needed for solo (deck) AND MP
@@ -310,6 +322,7 @@ export default function Game() {
   const playerLevel = me?.profile.level ?? 1;
   const arena = getArenaForLevel(playerLevel) ?? ARENAS[0];
   const ownedCardIds = me?.cards.map((c) => c.cardId) ?? [];
+  const localName = me?.profile.displayName ?? "Vous";
 
-  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} />;
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} localName={localName} opponentNameParam={opponentNameParam} />;
 }

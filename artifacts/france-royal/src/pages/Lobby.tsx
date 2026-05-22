@@ -10,11 +10,13 @@ function LobbySession({
   mode,
   joinCode,
   deck,
+  displayName,
   onBack,
 }: {
   mode: "create" | "join";
   joinCode: string;
   deck: string[] | undefined;
+  displayName: string;
   onBack: () => void;
 }) {
   const [, setLocation] = useLocation();
@@ -39,7 +41,8 @@ function LobbySession({
         // Host: opponent connected → start game (pass code so we can rejoin the room)
         setLocation(`/game?seed=${seedRef.current}&faction=player&code=${codeRef.current}`);
       } else if (msg.type === "room_joined") {
-        // Guest: we joined → navigate (pass code so we can rejoin the room)
+        // Guest: we joined → navigate (pass code so we can rejoin the room).
+        // Opponent name is fetched server-side via the `rejoined` payload.
         setLocation(`/game?seed=${msg.seed}&faction=enemy&code=${msg.code}`);
       } else if (msg.type === "opponent_left") {
         setPhase("error");
@@ -55,8 +58,8 @@ function LobbySession({
   const { createRoom, joinRoom } = useMultiplayer({
     onMessage: handleMessage,
     onOpen: () => {
-      if (mode === "create") createRoom(deck);
-      else joinRoom(joinCode, deck);
+      if (mode === "create") createRoom(deck, displayName);
+      else joinRoom(joinCode, deck, displayName);
     },
     onClose: () => {
       if (!mountedRef.current) return;
@@ -112,6 +115,7 @@ export default function Lobby() {
   const deck = selected && selected.length === 8 ? selected : undefined;
   const forbiddenInDeck = (deck ?? []).filter((id) => MP_FORBIDDEN_CARDS.has(id));
   const deckBlocked = forbiddenInDeck.length > 0;
+  const displayName = me?.profile.displayName ?? "Joueur";
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white relative overflow-hidden">
@@ -196,6 +200,7 @@ export default function Lobby() {
             mode={mode === "create" ? "create" : "join"}
             joinCode={mode !== null && typeof mode === "object" && mode.type === "join_session" ? mode.code : ""}
             deck={deck}
+            displayName={displayName}
             onBack={() => setMode(null)}
           />
         )}

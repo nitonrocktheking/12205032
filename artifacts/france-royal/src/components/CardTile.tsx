@@ -24,6 +24,7 @@ export default function CardTile({ cardId, locked, selected, onClick, size = "md
       type="button"
       onClick={onClick}
       disabled={locked && !onClick}
+      aria-label={card.fullName}
       data-testid={`card-tile-${cardId}`}
       className={`relative ${sizes[size]} rounded-xl overflow-hidden transition-all shrink-0
         border-2 ${selected ? "border-yellow-400 scale-105" : "border-slate-700"}

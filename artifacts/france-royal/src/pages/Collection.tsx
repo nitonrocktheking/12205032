@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useMe } from "../hooks/useMe";
 import CardTile from "../components/CardTile";
+import CardDetailDialog from "../components/CardDetailDialog";
 import { CARDS } from "../game/cards";
 import PageHeader from "../components/PageHeader";
 
 export default function Collection() {
   const { data: me, isLoading } = useMe();
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   if (isLoading || !me) {
     return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Chargement…</div>;
@@ -42,7 +45,12 @@ export default function Collection() {
           <div className="grid grid-cols-4 gap-3 justify-items-center">
             {me.allCards.map((id) => (
               <div key={id} className="flex flex-col items-center gap-1">
-                <CardTile cardId={id} locked={!owned.has(id)} size="md" />
+                <CardTile
+                  cardId={id}
+                  locked={!owned.has(id)}
+                  size="md"
+                  onClick={() => setSelectedCard(id)}
+                />
                 <div className="text-[10px] text-slate-400 text-center max-w-[80px] truncate font-medium">
                   {CARDS[id]?.fullName}
                 </div>
@@ -55,6 +63,12 @@ export default function Collection() {
           Gagnez des matchs pour débloquer de nouvelles personnalités !
         </div>
       </div>
+
+      <CardDetailDialog
+        cardId={selectedCard}
+        locked={selectedCard ? !owned.has(selectedCard) : false}
+        onClose={() => setSelectedCard(null)}
+      />
     </div>
   );
 }

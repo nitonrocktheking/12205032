@@ -23,6 +23,8 @@ interface Room {
   // join so both peers can build identical game states from each other's
   // actual collection rather than a default deck.
   decks: [string[] | null, string[] | null];
+  // Each player's display name, shown in the in-game HUD for both sides.
+  names: [string | null, string | null];
   deleteTimer: NodeJS.Timeout | null;
   // Locked once an outcome is finalized (after quorum or fallback timeout).
   finalOutcome: FinalOutcome | null;
@@ -30,6 +32,22 @@ interface Room {
   reports: [PeerReport | null, PeerReport | null];
   // Fires if only one peer ever reports — accept the lone report after a delay.
   fallbackTimer: NodeJS.Timeout | null;
+}
+
+// Smart matchmaking queue. A player sitting in `findMatchQueue` is paired with
+// the next entrant within 5 seconds; the client side is responsible for the
+// hard timeout / AI-fallback decision.
+interface QueueEntry {
+  ws: WebSocket;
+  deck: string[] | null;
+  name: string;
+}
+const findMatchQueue: QueueEntry[] = [];
+
+function parseName(raw: unknown): string {
+  if (typeof raw !== "string") return "Joueur";
+  const trimmed = raw.trim().slice(0, 24);
+  return trimmed.length > 0 ? trimmed : "Joueur";
 }
 
 function parseDeck(raw: unknown): string[] | null {
@@ -91,6 +109,12 @@ function scheduleRoomDeletion(room: Room, logger: Logger) {
   }, REJOIN_GRACE_MS);
 }
 
+// Per-socket room binding state. Stored externally so the matchmaking code
+// can also bind the *partner's* socket (whose own message handler closure
+// has its own local `roomCode`/`playerIndex` we can't reach into). The
+// close handler consults this map first, falling back to the local values.
+const socketBinding = new WeakMap<WebSocket, { code: string; idx: 0 | 1 }>();
+
 export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
   wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
     let roomCode: string | null = null;
@@ -110,6 +134,7 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
           const seed = Math.floor(Math.random() * 1_000_000);
           rooms.set(code, {
             code, seed, players: [ws, null], decks: [hostDeck, null],
+            names: [parseName(msg.displayName), null],
             deleteTimer: null,
             finalOutcome: null, reports: [null, null], fallbackTimer: null,
           });
@@ -134,11 +159,78 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
           cancelDeleteTimer(room);
           room.players[1] = ws;
           room.decks[1] = guestDeck;
+          room.names[1] = parseName(msg.displayName);
           roomCode = code;
           playerIndex = 1;
           send(ws, { type: "room_joined", code, seed: room.seed, faction: "enemy" });
           if (room.players[0]) send(room.players[0], { type: "opponent_joined" });
           logger.info({ code }, "Player joined room");
+        }
+
+        // Smart matchmaking: pair with the next waiting player, or wait in
+        // the queue. The client owns the 5-second timeout — if it gives up
+        // first, it sends `cancel_match` to leave the queue cleanly.
+        else if (msg.type === "find_match") {
+          const myDeck = parseDeck(msg.deck);
+          if (deckHasForbidden(myDeck)) {
+            send(ws, { type: "error", message: "La carte URSSAF est interdite en multijoueur. Retirez-la de votre deck." });
+            return;
+          }
+          const myName = parseName(msg.displayName);
+
+          // Drop any stale entries belonging to this same socket (defensive).
+          for (let i = findMatchQueue.length - 1; i >= 0; i--) {
+            if (findMatchQueue[i].ws === ws) findMatchQueue.splice(i, 1);
+          }
+
+          // Find another live player to pair with.
+          let partner: QueueEntry | null = null;
+          while (findMatchQueue.length > 0) {
+            const candidate = findMatchQueue.shift()!;
+            if (candidate.ws.readyState === WebSocket.OPEN && candidate.ws !== ws) {
+              partner = candidate;
+              break;
+            }
+          }
+
+          if (partner) {
+            // Pair them: spin up a room with both names + decks pre-filled.
+            const code = genCode();
+            const seed = Math.floor(Math.random() * 1_000_000);
+            const room: Room = {
+              code, seed,
+              players: [partner.ws, ws],
+              decks: [partner.deck, myDeck],
+              names: [partner.name, myName],
+              deleteTimer: null,
+              finalOutcome: null, reports: [null, null], fallbackTimer: null,
+            };
+            rooms.set(code, room);
+
+            // Bind BOTH sockets to this room immediately so the close handler
+            // can clean up (and notify the other side) even if a paired peer
+            // disconnects in the brief window before navigating to /game and
+            // sending `rejoin_room`. The partner's message handler still has
+            // its own local roomCode=null, but the close handler falls back
+            // to socketBinding so cleanup still fires.
+            socketBinding.set(partner.ws, { code, idx: 0 });
+            socketBinding.set(ws, { code, idx: 1 });
+            roomCode = code;
+            playerIndex = 1;
+
+            send(partner.ws, { type: "match_found", code, seed, faction: "player", opponentName: myName });
+            send(ws, { type: "match_found", code, seed, faction: "enemy", opponentName: partner.name });
+            logger.info({ code }, "Matchmaking paired two players");
+          } else {
+            findMatchQueue.push({ ws, deck: myDeck, name: myName });
+            logger.info({ name: myName, queueSize: findMatchQueue.length }, "Player queued for matchmaking");
+          }
+        }
+
+        else if (msg.type === "cancel_match") {
+          for (let i = findMatchQueue.length - 1; i >= 0; i--) {
+            if (findMatchQueue[i].ws === ws) findMatchQueue.splice(i, 1);
+          }
         }
 
         // Re-attach after navigating from Lobby to Game (old WS was closed).
@@ -159,14 +251,19 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
           // record it — but never let it overwrite the opponent's slot.
           const incoming = parseDeck(msg.deck);
           if (incoming) room.decks[idx] = incoming;
+          if (typeof msg.displayName === "string") {
+            room.names[idx] = parseName(msg.displayName);
+          }
           roomCode = code;
           playerIndex = idx;
+          const opponentIdx: 0 | 1 = idx === 0 ? 1 : 0;
           send(ws, {
             type: "rejoined",
             code,
             faction,
             hostDeck: room.decks[0],
             joinerDeck: room.decks[1],
+            opponentName: room.names[opponentIdx],
           });
           logger.info({ code, faction }, "Player rejoined room");
         }
@@ -273,21 +370,31 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
     });
 
     ws.on("close", () => {
-      if (roomCode === null || playerIndex === null) return;
-      const room = rooms.get(roomCode);
+      // Always remove this socket from the matchmaking queue on disconnect.
+      for (let i = findMatchQueue.length - 1; i >= 0; i--) {
+        if (findMatchQueue[i].ws === ws) findMatchQueue.splice(i, 1);
+      }
+      // Prefer this connection's own state; fall back to the matchmaking
+      // binding (covers the window between `match_found` and `rejoin_room`).
+      const binding = socketBinding.get(ws);
+      const code = roomCode ?? binding?.code ?? null;
+      const idx = playerIndex ?? binding?.idx ?? null;
+      socketBinding.delete(ws);
+      if (code === null || idx === null) return;
+      const room = rooms.get(code);
       if (!room) return;
 
       // If this socket was already replaced by a fresh one (Lobby→Game navigation
       // where the new WS rejoined before the old WS close event arrived), do nothing.
-      if (room.players[playerIndex] !== ws) {
-        logger.info({ code: roomCode, playerIndex }, "Stale socket close ignored (already replaced)");
+      if (room.players[idx] !== ws) {
+        logger.info({ code, idx }, "Stale socket close ignored (already replaced)");
         return;
       }
 
-      room.players[playerIndex] = null;
+      room.players[idx] = null;
       // Only schedule deletion if at least one slot is now empty.
       scheduleRoomDeletion(room, logger);
-      logger.info({ code: roomCode, playerIndex }, "Player disconnected, grace started");
+      logger.info({ code, idx }, "Player disconnected, grace started");
     });
   });
 }

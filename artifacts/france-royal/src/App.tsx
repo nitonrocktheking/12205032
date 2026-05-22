@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Menu from "./pages/Menu";
 import Game from "./pages/Game";
 import Lobby from "./pages/Lobby";
+import Play from "./pages/Play";
 import Results from "./pages/Results";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -133,6 +134,14 @@ function GuardedLobby() {
     </>
   );
 }
+function GuardedPlay() {
+  return (
+    <>
+      <Show when="signed-in"><RequireUsername><Play /></RequireUsername></Show>
+      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+    </>
+  );
+}
 function GuardedCollection() {
   return (
     <>
@@ -198,6 +207,7 @@ function ClerkRouter() {
             <Route path="/sign-up/*?"  component={SignUpPage} />
             <Route path="/game"        component={GuardedGame} />
             <Route path="/lobby"       component={GuardedLobby} />
+            <Route path="/play"        component={GuardedPlay} />
             <Route path="/collection"  component={GuardedCollection} />
             <Route path="/deck"        component={GuardedDeckEditor} />
             <Route path="/progression" component={GuardedProgression} />
