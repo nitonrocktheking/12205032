@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Faction, GameState } from "../game/types";
 import { MAX_ELIXIR } from "../game/constants";
 import { ArenaTheme } from "../game/arenas";
+import { isMuted, toggleMuted, subscribeMuted } from "../lib/sfx";
 
 interface HUDProps {
   state: GameState;
@@ -11,6 +13,8 @@ interface HUDProps {
 }
 
 export default function HUD({ state, localFaction = "player", arena, localName, opponentName }: HUDProps) {
+  const [muted, setMutedState] = useState<boolean>(() => isMuted());
+  useEffect(() => subscribeMuted(setMutedState), []);
   // Crowns = enemy towers destroyed (towers belonging to the opposing faction)
   const myCrowns  = state.towers.filter(t => t.faction !== localFaction && t.hp <= 0).length;
   const oppCrowns = state.towers.filter(t => t.faction === localFaction  && t.hp <= 0).length;
@@ -44,11 +48,22 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
 
       {/* Top row: crowns + arena name + timer */}
       <div className="flex items-center justify-between mb-2">
-        {/* Crowns left */}
-        <div className="flex items-center gap-0.5">
-          {[0, 1, 2].map(i => (
-            <Crown key={i} filled={i < myCrowns} color="blue" />
-          ))}
+        {/* Crowns left + mute toggle */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => toggleMuted()}
+            aria-label={muted ? "Activer le son" : "Couper le son"}
+            data-testid="button-toggle-sfx"
+            className="w-6 h-6 rounded-md bg-slate-800/80 hover:bg-slate-700 active:translate-y-px border border-slate-700 text-slate-300 text-xs leading-none flex items-center justify-center shadow-[0_2px_0_rgba(0,0,0,0.4)]"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+          <div className="flex items-center gap-0.5">
+            {[0, 1, 2].map(i => (
+              <Crown key={i} filled={i < myCrowns} color="blue" />
+            ))}
+          </div>
         </div>
 
         {/* Center: arena + timer */}

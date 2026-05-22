@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Faction, GameState } from "../game/types";
 import { createInitialState, updateGame, playCard, playEnemyCard } from "../game/engine";
+import { playSfx, preloadAll, installAudioUnlock } from "../lib/sfx";
+import { DOUBLE_ELIXIR_THRESHOLD } from "../game/constants";
 import { RENDER_RATE, ARENA_HEIGHT } from "../game/constants";
 import { ArenaTheme, ARENAS, getArenaForLevel } from "../game/arenas";
 import Arena from "../components/Arena";
@@ -107,12 +109,22 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
     },
   });
 
+  // ── SFX preload + autoplay unlock (once) ─────────────────────────────────
+  useEffect(() => { preloadAll(); installAudioUnlock(); }, []);
+
   // ── Game loop ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let lastTick = performance.now();
     let lastRender = performance.now();
     let reqId: number;
     let redirected = false;
+    // SFX edge-detection state. We watch transitions across loop iterations so
+    // the engine stays pure (no audio coupling) and so MP peers fire sounds
+    // based on their own observed simulation.
+    let prevDeadTowers = 0;
+    let prevDoubleElixir = false;
+    let prevOvertime = false;
+    let gameOverSfxFired = false;
 
     const loop = (now: number) => {
       const state = gameStateRef.current;
@@ -124,6 +136,38 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
       const dt = Math.min((now - lastTick) / 1000, 0.05);
       lastTick = now;
       updateGame(state, dt);
+
+      // ── SFX edge detection (post-tick) ───────────────────────────────────
+      // Any tower that just hit 0 hp this tick → crown thud. Count works for
+      // either side: dramatic feedback whether it's yours or your opponent's.
+      const deadTowers = state.towers.reduce((n, t) => n + (t.hp <= 0 ? 1 : 0), 0);
+      if (deadTowers > prevDeadTowers) playSfx("tower_destroyed");
+      prevDeadTowers = deadTowers;
+
+      // Double-elixir / overtime chime — fired once on entry.
+      const inDouble = state.isOvertime || state.timeRemaining <= DOUBLE_ELIXIR_THRESHOLD;
+      if ((inDouble && !prevDoubleElixir) || (state.isOvertime && !prevOvertime)) {
+        playSfx("double_elixir");
+      }
+      prevDoubleElixir = inDouble;
+      prevOvertime = state.isOvertime;
+
+      // Game-over jingle — fired once per match.
+      // Solo: trust local sim. MP: wait for `match_finalized` so we never play
+      // "victory" then redirect to a "defeat" screen (or vice versa).
+      if (!gameOverSfxFired) {
+        const sharedWinner = isMultiplayer
+          ? agreedOutcomeRef.current?.winner
+          : (state.status === "gameover" ? state.winner : undefined);
+        if (sharedWinner !== undefined) {
+          gameOverSfxFired = true;
+          const localWin = localFaction === "player"
+            ? sharedWinner === "player"
+            : sharedWinner === "enemy";
+          if (sharedWinner === "draw") playSfx("defeat");
+          else playSfx(localWin ? "victory" : "defeat");
+        }
+      }
 
       if (now - lastRender > RENDER_RATE) {
         const s = state;
@@ -236,16 +280,22 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 
     if (localFaction === "player") {
       if (playCard(state, selectedCard, { x, y })) {
+        playSfx("card_play");
         if (isMultiplayer) sendPlayCard(selectedCard, x, y);
         setSelectedCard(null);
         syncRender();
+      } else {
+        playSfx("denied");
       }
     } else {
       // Player 2: clicks arrive already in internal coords (translated by Arena)
       if (playEnemyCard(state, selectedCard, { x, y })) {
+        playSfx("card_play");
         if (isMultiplayer) sendPlayCard(selectedCard, x, y);
         setSelectedCard(null);
         syncRender();
+      } else {
+        playSfx("denied");
       }
     }
   };

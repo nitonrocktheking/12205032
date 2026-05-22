@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "Xiyzxt7ZQJ_9vI-b61Djx"
@@ -252,3 +251,39 @@ id = "L_CGNQn2wJgz3Y0wF8vc1"
 uri = "file://artifacts/france-royal/src/assets/politicians/immigres.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "_fX-YuX3AuMjOA7xyTDGq"
+uri = "file://artifacts/france-royal/public/sfx/card_play.mp3"
+type = "audio"
+title = "card_play"
+
+[[outputs]]
+id = "PMvaooUgsfdKyVE76_HQr"
+uri = "file://artifacts/france-royal/public/sfx/victory.mp3"
+type = "audio"
+title = "victory"
+
+[[outputs]]
+id = "-OkcoIE0jobOaJjht_Vpq"
+uri = "file://artifacts/france-royal/public/sfx/tower_destroyed.mp3"
+type = "audio"
+title = "tower_destroyed"
+
+[[outputs]]
+id = "Oj0cjNC_Eh01xqSmLOOwv"
+uri = "file://artifacts/france-royal/public/sfx/defeat.mp3"
+type = "audio"
+title = "defeat"
+
+[[outputs]]
+id = "p7yjpjLBHM8gKDl8pFDS1"
+uri = "file://artifacts/france-royal/public/sfx/double_elixir.mp3"
+type = "audio"
+title = "double_elixir"
+
+[[outputs]]
+id = "IQ8aTV60dVQb-J_Hc8n1X"
+uri = "file://artifacts/france-royal/public/sfx/denied.mp3"
+type = "audio"
+title = "denied"
