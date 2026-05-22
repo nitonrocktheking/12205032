@@ -200,19 +200,30 @@ export const updateGame = (state: GameState, dt: number) => {
     }
   }
 
-  // ── Tax zones (L'Impôt) — drain 1 elixir from each enemy unit that enters, once per zone.
+  // ── Tax zones (L'Impôt) — continuous drain: 1 elixir per second per enemy
+  // unit currently inside the zone. Sustained over time so the drain is clearly
+  // visible on the victim's bar and survives small position desyncs between MP
+  // peers (a one-frame difference no longer means a missed drain).
   if (state.taxZones.length > 0) {
     state.taxZones = state.taxZones.filter(z => state.elapsedTime - z.createdAt < z.duration);
     for (const zone of state.taxZones) {
       const victimFaction: Faction = zone.casterFaction === 'player' ? 'enemy' : 'player';
+      let unitsInside = 0;
       for (const u of state.units) {
         if (u.faction !== victimFaction || u.hp <= 0) continue;
-        if (zone.drainedIds.includes(u.id)) continue;
         if (dist(u.position, zone.position) <= zone.radius + u.radius) {
-          zone.drainedIds.push(u.id);
-          state.elixir[victimFaction] = Math.max(0, state.elixir[victimFaction] - 1);
-          addFloat(state, '-1 elixir', u.position, '#fbbf24');
+          unitsInside++;
+          // Fire a one-shot "-1 elixir/s" tag the first time a given unit
+          // enters the zone, so the victim sees they're being taxed.
+          if (!zone.drainedIds.includes(u.id)) {
+            zone.drainedIds.push(u.id);
+            addFloat(state, '-1 elixir/s', u.position, '#fbbf24');
+          }
         }
+      }
+      if (unitsInside > 0) {
+        const drain = unitsInside * dt; // 1 elixir per second per unit inside
+        state.elixir[victimFaction] = Math.max(0, state.elixir[victimFaction] - drain);
       }
     }
   }

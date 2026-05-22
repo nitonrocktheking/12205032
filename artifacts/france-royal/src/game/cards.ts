@@ -237,7 +237,7 @@ export const CARDS: Record<string, CardDef> = {
     fullName: "Le Percepteur",
     name: "L'Impot",
     powerName: "Perimetre Fiscal",
-    powerDesc: "Cree une zone de controle 10s : chaque ennemi qui entre fait perdre 1 elixir a son camp",
+    powerDesc: "Zone de controle 10s : draine 1 elixir/seconde par unite ennemie a l'interieur",
     cost: 3,
     color: "#166534",
     label: "IMP",
