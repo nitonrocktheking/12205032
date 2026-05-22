@@ -3,15 +3,18 @@ import { useLocation } from "wouter";
 import { useMultiplayer, MPMessage } from "../hooks/useMultiplayer";
 import { Button } from "@/components/ui/button";
 import PageHeader from "../components/PageHeader";
+import { useMe, getSelectedDeck } from "../hooks/useMe";
 
 // ─── Connected session (mounted only when a mode is chosen) ──────────────────
 function LobbySession({
   mode,
   joinCode,
+  deck,
   onBack,
 }: {
   mode: "create" | "join";
   joinCode: string;
+  deck: string[] | undefined;
   onBack: () => void;
 }) {
   const [, setLocation] = useLocation();
@@ -52,8 +55,8 @@ function LobbySession({
   const { createRoom, joinRoom } = useMultiplayer({
     onMessage: handleMessage,
     onOpen: () => {
-      if (mode === "create") createRoom();
-      else joinRoom(joinCode);
+      if (mode === "create") createRoom(deck);
+      else joinRoom(joinCode, deck);
     },
     onClose: () => {
       if (!mountedRef.current) return;
@@ -102,6 +105,9 @@ type Mode = null | "create" | { type: "join_input" } | { type: "join_session"; c
 export default function Lobby() {
   const [mode, setMode]       = useState<Mode>(null);
   const [joinCode, setJoinCode] = useState("");
+  const { data: me } = useMe();
+  const selected = getSelectedDeck(me);
+  const deck = selected && selected.length === 8 ? selected : undefined;
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white relative overflow-hidden">
@@ -176,6 +182,7 @@ export default function Lobby() {
           <LobbySession
             mode={mode === "create" ? "create" : "join"}
             joinCode={mode !== null && typeof mode === "object" && mode.type === "join_session" ? mode.code : ""}
+            deck={deck}
             onBack={() => setMode(null)}
           />
         )}

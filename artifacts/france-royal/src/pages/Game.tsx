@@ -23,10 +23,15 @@ function parseParams() {
 
 function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[] }) {
   const [, setLocation] = useLocation();
-  const gameStateRef = useRef<GameState>(
-    createInitialState(seed, deck, undefined, { playerLevel, aiCardPool: ownedCardIds }),
-  );
-  const [renderState, setRenderState] = useState<GameState>(() => ({ ...gameStateRef.current }));
+  // Solo state is built immediately from the player's selected deck. MP state
+  // waits until the server returns BOTH decks (via `rejoined`) so both peers
+  // can call createInitialState with identical (seed, hostDeck, joinerDeck).
+  const initialState: GameState | null = isMultiplayer
+    ? null
+    : createInitialState(seed, deck, undefined, { playerLevel, aiCardPool: ownedCardIds });
+  const gameStateRef = useRef<GameState | null>(initialState);
+  const [renderState, setRenderState] = useState<GameState | null>(initialState);
+  const [mpReady, setMpReady] = useState<boolean>(!isMultiplayer);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [opponentLeft, setOpponentLeft] = useState(false);
   // Authoritative MP outcome agreed between the two peers. First peer to
@@ -43,11 +48,25 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   // ── Multiplayer WebSocket relay ────────────────────────────────────────────
   const { sendPlayCard, rejoinRoom, sendGameOver } = useMultiplayer({
     onMessage: (msg) => {
+      if (msg.type === "rejoined" && isMultiplayer) {
+        // Both decks arrived from the server — build the shared initial state
+        // now (same inputs on both peers → identical state, identical RNG).
+        if (gameStateRef.current) return; // already built
+        const hostDeck = msg.hostDeck ?? undefined;
+        const joinerDeck = msg.joinerDeck ?? undefined;
+        const s = createInitialState(seed, hostDeck, joinerDeck, { playerLevel, aiCardPool: ownedCardIds });
+        gameStateRef.current = s;
+        setRenderState(s);
+        setMpReady(true);
+        return;
+      }
+      const state = gameStateRef.current;
+      if (!state) return;
       if (msg.type === "opponent_play_card") {
         if (localFaction === "player") {
-          playEnemyCard(gameStateRef.current, msg.cardIndex, { x: msg.x, y: msg.y });
+          playEnemyCard(state, msg.cardIndex, { x: msg.x, y: msg.y });
         } else {
-          playCard(gameStateRef.current, msg.cardIndex, { x: msg.x, y: msg.y });
+          playCard(state, msg.cardIndex, { x: msg.x, y: msg.y });
         }
         // Force immediate re-render so the opponent's unit appears without waiting for the next tick.
         syncRender();
@@ -56,8 +75,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
         // payload (the first valid `game_over` report wins; the rest are
         // dropped on the server). We trust this over any local computation.
         agreedOutcomeRef.current = { winner: msg.winner, pCrowns: msg.pCrowns, eCrowns: msg.eCrowns };
-        gameStateRef.current.status = "gameover";
-        gameStateRef.current.winner = msg.winner;
+        state.status = "gameover";
+        state.winner = msg.winner;
       } else if (msg.type === "opponent_left") {
         setOpponentLeft(true);
       } else if (msg.type === "error" && isMultiplayer) {
@@ -66,9 +85,11 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
       }
     },
     onOpen: () => {
-      // After navigating from Lobby, re-attach to the same room with the same faction.
+      // After navigating from Lobby, re-attach to the same room with the same
+      // faction. Re-send our own deck so the server can recover if the original
+      // create/join message was lost.
       if (isMultiplayer && roomCode) {
-        rejoinRoom(roomCode, localFaction);
+        rejoinRoom(roomCode, localFaction, deck);
       }
     },
   });
@@ -81,12 +102,18 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
     let redirected = false;
 
     const loop = (now: number) => {
+      const state = gameStateRef.current;
+      if (!state) {
+        // MP: waiting for decks from server. Tick without advancing the sim.
+        reqId = requestAnimationFrame(loop);
+        return;
+      }
       const dt = Math.min((now - lastTick) / 1000, 0.05);
       lastTick = now;
-      updateGame(gameStateRef.current, dt);
+      updateGame(state, dt);
 
       if (now - lastRender > RENDER_RATE) {
-        const s = gameStateRef.current;
+        const s = state;
         setRenderState({
           ...s,
           units: [...s.units],
@@ -98,8 +125,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
         lastRender = now;
       }
 
-      if (gameStateRef.current.status === "gameover") {
-        const { winner: localComputedWinner, towers } = gameStateRef.current;
+      if (state.status === "gameover") {
+        const { winner: localComputedWinner, towers } = state;
 
         // In MP, never redirect from a purely local result. We report our
         // observation to the server and wait for `match_finalized` to lock
@@ -190,16 +217,18 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
   // ── Card play ──────────────────────────────────────────────────────────────
   const handleArenaClick = (x: number, y: number) => {
     if (selectedCard === null) return;
+    const state = gameStateRef.current;
+    if (!state) return;
 
     if (localFaction === "player") {
-      if (playCard(gameStateRef.current, selectedCard, { x, y })) {
+      if (playCard(state, selectedCard, { x, y })) {
         if (isMultiplayer) sendPlayCard(selectedCard, x, y);
         setSelectedCard(null);
         syncRender();
       }
     } else {
       // Player 2: clicks arrive already in internal coords (translated by Arena)
-      if (playEnemyCard(gameStateRef.current, selectedCard, { x, y })) {
+      if (playEnemyCard(state, selectedCard, { x, y })) {
         if (isMultiplayer) sendPlayCard(selectedCard, x, y);
         setSelectedCard(null);
         syncRender();
@@ -209,7 +238,16 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 
   function syncRender() {
     const s = gameStateRef.current;
+    if (!s) return;
     setRenderState({ ...s, units: [...s.units], towers: [...s.towers], hand: [...s.hand], enemyHand: [...s.enemyHand], floatingTexts: [...s.floatingTexts] });
+  }
+
+  if (!renderState || !mpReady) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        <p className="animate-pulse">Synchronisation avec l&apos;adversaire…</p>
+      </div>
+    );
   }
 
   // Choose which hand / elixir to show
@@ -261,14 +299,14 @@ export default function Game() {
   const { seed, isMultiplayer, localFaction, roomCode } = parseParams();
   const { data: me, isLoading } = useMe();
 
-  // Wait for user data before initializing solo state so we use the selected deck.
-  // MP doesn't need it (uses default deck for both sides for now).
-  if (!isMultiplayer && isLoading) {
+  // Wait for user data before initializing — needed for solo (deck) AND MP
+  // (we send our deck to the server so the opponent can build the same state).
+  if (isLoading) {
     return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Préparation de l'arène…</div>;
   }
 
-  const deck = isMultiplayer ? undefined : getSelectedDeck(me);
-  const finalDeck = deck && deck.length === 8 ? deck : undefined;
+  const selected = getSelectedDeck(me);
+  const finalDeck = selected && selected.length === 8 ? selected : undefined;
   const playerLevel = me?.profile.level ?? 1;
   const arena = getArenaForLevel(playerLevel) ?? ARENAS[0];
   const ownedCardIds = me?.cards.map((c) => c.cardId) ?? [];

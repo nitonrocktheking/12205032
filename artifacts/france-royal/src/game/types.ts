@@ -100,6 +100,10 @@ export interface GameState {
   // Card IDs the AI is allowed to play in solo. Restricted to what the player
   // actually owns, so beginners never face cards they haven't unlocked yet.
   aiCardPool: string[];
+  // Deterministic RNG. In MP it's seeded from the shared `seed` so both peers
+  // consume the exact same random stream — critical to avoid visual / gameplay
+  // divergence across screens. In solo it's just Math.random.
+  rng: () => number;
 }
 
 export interface TaxZone {

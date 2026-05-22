@@ -40,6 +40,9 @@ export const createInitialState = (
   solo?: SoloOptions,
 ): GameState => {
   const rng = seed !== undefined ? seededRandom(seed) : Math.random;
+  // Same generator is stored on the state and reused for every later random
+  // roll (combat conversion, spawn jitter, etc.) so both MP peers stay in sync.
+  const stateRng: () => number = rng;
 
   const playerTowers = getTowerPositions('player');
   const enemyTowers  = getTowerPositions('enemy');
@@ -98,6 +101,7 @@ export const createInitialState = (
     taxZones: [],
     aiDifficulty,
     aiCardPool,
+    rng: stateRng,
   };
 };
 
@@ -541,7 +545,7 @@ const findTargetForTower = (state: GameState, tower: Tower): Unit | null => {
 
 // ─── Combat ───────────────────────────────────────────────────────────────────
 const attackUnit = (attacker: Unit, target: Unit, state: GameState) => {
-  if (attacker.special === 'conversion' && !target.isConverted && Math.random() < 0.4) {
+  if (attacker.special === 'conversion' && !target.isConverted && state.rng() < 0.4) {
     target.faction = attacker.faction;
     target.color = attacker.faction === 'player' ? '#3b82f6' : '#ef4444';
     target.isConverted = true;
@@ -611,7 +615,7 @@ const addFloat = (state: GameState, text: string, pos: Position, color: string) 
   state.floatingTexts.push({
     id: `f${++unitCounter}`,
     text, color, createdAt: state.elapsedTime,
-    x: pos.x + (Math.random() - 0.5) * 18,
+    x: pos.x + (state.rng() - 0.5) * 18,
     y: pos.y - 10,
   });
 };

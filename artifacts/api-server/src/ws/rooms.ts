@@ -19,6 +19,10 @@ interface Room {
   code: string;
   seed: number;
   players: [WebSocket | null, WebSocket | null];
+  // Each player's chosen deck (8 card IDs). Exchanged at room creation /
+  // join so both peers can build identical game states from each other's
+  // actual collection rather than a default deck.
+  decks: [string[] | null, string[] | null];
   deleteTimer: NodeJS.Timeout | null;
   // Locked once an outcome is finalized (after quorum or fallback timeout).
   finalOutcome: FinalOutcome | null;
@@ -26,6 +30,17 @@ interface Room {
   reports: [PeerReport | null, PeerReport | null];
   // Fires if only one peer ever reports — accept the lone report after a delay.
   fallbackTimer: NodeJS.Timeout | null;
+}
+
+function parseDeck(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  if (raw.length !== 8) return null;
+  const out: string[] = [];
+  for (const v of raw) {
+    if (typeof v !== "string" || v.length === 0 || v.length > 40) return null;
+    out.push(v);
+  }
+  return out;
 }
 
 // If only one peer reports game_over, wait this long for the other before
@@ -80,8 +95,10 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
         if (msg.type === "create_room") {
           const code = genCode();
           const seed = Math.floor(Math.random() * 1_000_000);
+          const hostDeck = parseDeck(msg.deck);
           rooms.set(code, {
-            code, seed, players: [ws, null], deleteTimer: null,
+            code, seed, players: [ws, null], decks: [hostDeck, null],
+            deleteTimer: null,
             finalOutcome: null, reports: [null, null], fallbackTimer: null,
           });
           roomCode = code;
@@ -98,6 +115,7 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
 
           cancelDeleteTimer(room);
           room.players[1] = ws;
+          room.decks[1] = parseDeck(msg.deck);
           roomCode = code;
           playerIndex = 1;
           send(ws, { type: "room_joined", code, seed: room.seed, faction: "enemy" });
@@ -106,6 +124,8 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
         }
 
         // Re-attach after navigating from Lobby to Game (old WS was closed).
+        // The rejoin response carries BOTH decks so each peer builds the same
+        // initial state regardless of which side it joined as.
         else if (msg.type === "rejoin_room") {
           const code = String(msg.code ?? "").toUpperCase().trim();
           const faction = msg.faction === "enemy" ? "enemy" : "player";
@@ -117,9 +137,19 @@ export function setupWebSocket(wss: WebSocketServer, logger: Logger) {
           }
           cancelDeleteTimer(room);
           room.players[idx] = ws;
+          // If the client re-sends its deck on rejoin (e.g. after a refresh),
+          // record it — but never let it overwrite the opponent's slot.
+          const incoming = parseDeck(msg.deck);
+          if (incoming) room.decks[idx] = incoming;
           roomCode = code;
           playerIndex = idx;
-          send(ws, { type: "rejoined", code, faction });
+          send(ws, {
+            type: "rejoined",
+            code,
+            faction,
+            hostDeck: room.decks[0],
+            joinerDeck: room.decks[1],
+          });
           logger.info({ code, faction }, "Player rejoined room");
         }
 
