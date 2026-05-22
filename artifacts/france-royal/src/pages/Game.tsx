@@ -154,7 +154,15 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }:
 
       <HUD state={renderState} localFaction={localFaction} arena={arena} />
       <div className="flex-1 relative min-h-0">
-        <Arena state={renderState} onClick={handleArenaClick} flipped={flipped} localFaction={localFaction} arena={arena} />
+        <Arena
+          state={renderState}
+          onClick={handleArenaClick}
+          flipped={flipped}
+          localFaction={localFaction}
+          arena={arena}
+          placing={selectedCard !== null}
+          placingCardId={selectedCard !== null ? displayHand[selectedCard]?.id : undefined}
+        />
       </div>
       <CardHand
         hand={displayHand}

@@ -91,6 +91,19 @@ export interface GameState {
   // die, opponent towers take DOT, and the caster's own towers become invisible
   // from the opponent's viewpoint.
   urssafEffect?: { casterFaction: Faction; startTime: number } | null;
+  // Active "Impôt" perimeters. Each enemy unit that enters drains 1 elixir
+  // from its faction (once per zone). Auto-expires after `duration`.
+  taxZones: TaxZone[];
+}
+
+export interface TaxZone {
+  id: string;
+  casterFaction: Faction;
+  position: Position;
+  radius: number;
+  createdAt: number;   // elapsedTime
+  duration: number;    // seconds
+  drainedIds: string[];
 }
 
 export interface FloatingText {

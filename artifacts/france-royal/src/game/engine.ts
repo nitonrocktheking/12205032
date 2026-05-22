@@ -75,8 +75,14 @@ export const createInitialState = (seed?: number, playerDeckIds?: string[], enem
     enemyNextCard: enemyShuffle[4],
     enemyNextSpawnTime: GAME_DURATION - 10,
     floatingTexts: [],
+    taxZones: [],
   };
 };
+
+// Visual + gameplay radius of "L'Impôt" perimeter (in arena coords)
+const TAX_ZONE_RADIUS = 70;
+const TAX_ZONE_DURATION = 10;
+let taxZoneCounter = 0;
 
 // ─── Main Update Loop ─────────────────────────────────────────────────────────
 export const updateGame = (state: GameState, dt: number) => {
@@ -184,6 +190,23 @@ export const updateGame = (state: GameState, dt: number) => {
     }
   }
 
+  // ── Tax zones (L'Impôt) — drain 1 elixir from each enemy unit that enters, once per zone.
+  if (state.taxZones.length > 0) {
+    state.taxZones = state.taxZones.filter(z => state.elapsedTime - z.createdAt < z.duration);
+    for (const zone of state.taxZones) {
+      const victimFaction: Faction = zone.casterFaction === 'player' ? 'enemy' : 'player';
+      for (const u of state.units) {
+        if (u.faction !== victimFaction || u.hp <= 0) continue;
+        if (zone.drainedIds.includes(u.id)) continue;
+        if (dist(u.position, zone.position) <= zone.radius + u.radius) {
+          zone.drainedIds.push(u.id);
+          state.elixir[victimFaction] = Math.max(0, state.elixir[victimFaction] - 1);
+          addFloat(state, '-1 elixir', u.position, '#fbbf24');
+        }
+      }
+    }
+  }
+
   // ── URSSAF global effect: transform opponent units into invoices and DOT them + their towers.
   if (state.urssafEffect) {
     const caster = state.urssafEffect.casterFaction;
@@ -231,6 +254,22 @@ export const playCard = (state: GameState, cardIndex: number, pos: Position): bo
     x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
     y: Math.max(ARENA_HEIGHT / 2 + 15, Math.min(ARENA_HEIGHT - 20, pos.y)),
   };
+
+  if (card.special === 'tax_zone') {
+    state.taxZones.push({
+      id: `tz${++taxZoneCounter}`,
+      casterFaction: 'player',
+      position: spawnPos,
+      radius: TAX_ZONE_RADIUS,
+      createdAt: state.elapsedTime,
+      duration: TAX_ZONE_DURATION,
+      drainedIds: [],
+    });
+    addFloat(state, 'CONTROLE FISCAL !', spawnPos, '#fbbf24');
+    drawNextCard(state, cardIndex, 'player');
+    return true;
+  }
+
   spawnUnit(state, card, 'player', spawnPos);
 
   if (card.special === 'tax_allies') {
@@ -263,6 +302,22 @@ export const playEnemyCard = (state: GameState, cardIndex: number, pos: Position
     x: Math.max(20, Math.min(ARENA_WIDTH - 20, pos.x)),
     y: Math.min(ARENA_HEIGHT / 2 - 15, Math.max(20, pos.y)),
   };
+
+  if (card.special === 'tax_zone') {
+    state.taxZones.push({
+      id: `tz${++taxZoneCounter}`,
+      casterFaction: 'enemy',
+      position: spawnPos,
+      radius: TAX_ZONE_RADIUS,
+      createdAt: state.elapsedTime,
+      duration: TAX_ZONE_DURATION,
+      drainedIds: [],
+    });
+    addFloat(state, 'CONTROLE FISCAL !', spawnPos, '#fbbf24');
+    drawNextCard(state, cardIndex, 'enemy');
+    return true;
+  }
+
   spawnUnit(state, card, 'enemy', spawnPos);
 
   if (card.special === 'tax_allies') {
