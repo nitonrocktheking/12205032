@@ -15,10 +15,11 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
   const myCrowns  = state.towers.filter(t => t.faction !== localFaction && t.hp <= 0).length;
   const oppCrowns = state.towers.filter(t => t.faction === localFaction  && t.hp <= 0).length;
 
-  const m = Math.floor(state.timeRemaining / 60);
-  const s = Math.floor(state.timeRemaining % 60);
+  const m = Math.floor(Math.max(0, state.timeRemaining) / 60);
+  const s = Math.floor(Math.max(0, state.timeRemaining) % 60);
   const timeStr = `${m}:${s.toString().padStart(2, "0")}`;
-  const lowTime = state.timeRemaining < 30;
+  const doubleElixir = state.isOvertime || state.timeRemaining < 30;
+  const lowTime = doubleElixir;
 
   const myElixir   = localFaction === "player" ? state.elixir.player : state.elixir.enemy;
   const elixirInt  = Math.floor(myElixir);
@@ -60,6 +61,15 @@ export default function HUD({ state, localFaction = "player", arena, localName, 
           <div className={`text-xl font-black font-mono tracking-wider leading-tight ${lowTime ? 'text-red-400 animate-pulse' : 'text-white'}`}>
             {timeStr}
           </div>
+          {state.isOvertime ? (
+            <div className="text-[9px] uppercase tracking-[0.25em] font-black text-rose-300 leading-none mt-0.5 animate-pulse">
+              Mort subite · x2 élixir
+            </div>
+          ) : doubleElixir ? (
+            <div className="text-[9px] uppercase tracking-[0.25em] font-black text-fuchsia-300 leading-none mt-0.5">
+              x2 élixir
+            </div>
+          ) : null}
         </div>
 
         {/* Crowns right */}

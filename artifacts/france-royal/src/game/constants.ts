@@ -17,6 +17,12 @@ export const MAX_ELIXIR = 10;
 export const ELIXIR_RATE = 1; // per second
 
 export const GAME_DURATION = 120; // seconds
+// Last 30 seconds of regulation (and the whole overtime period): elixir
+// regenerates twice as fast.
+export const DOUBLE_ELIXIR_THRESHOLD = 30;
+// Sudden-death overtime length when regulation ends in a tower-tie. First
+// crown destroyed wins; if it expires still tied, the match is a draw.
+export const OVERTIME_DURATION = 120;
 
 export const TOWER_KING_HP = 3000;
 export const TOWER_PRINCESS_HP = 1500;

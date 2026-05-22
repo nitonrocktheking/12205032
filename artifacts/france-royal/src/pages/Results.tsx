@@ -11,9 +11,11 @@ export default function Results() {
   const pCrowns = searchParams.get('pCrowns');
   const eCrowns = searchParams.get('eCrowns');
   const isMP    = searchParams.get('mp') === '1';
+  const isFriendly = searchParams.get('friend') === '1';
 
   const isWin  = winner === 'player';
   const isDraw = winner === 'draw';
+  const pCrownsNum = Math.max(0, Math.min(3, Number(pCrowns) || 0));
 
   const report = useReportMatchResult();
   const reported = useRef(false);
@@ -22,9 +24,11 @@ export default function Results() {
   useEffect(() => {
     if (reported.current) return;
     reported.current = true;
+    // Private-room (friend) matches are purely for fun: no rewards, no penalty.
+    if (isFriendly) return;
     const res: "win" | "loss" | "draw" = isWin ? "win" : isDraw ? "draw" : "loss";
-    report.mutateAsync(res).then(setReward).catch(() => {});
-  }, [isWin, isDraw, report]);
+    report.mutateAsync({ result: res, crowns: pCrownsNum }).then(setReward).catch(() => {});
+  }, [isWin, isDraw, isFriendly, pCrownsNum, report]);
 
   // Colors
   const titleColor = isWin ? 'text-amber-300' : isDraw ? 'text-slate-300' : 'text-rose-400';
@@ -64,17 +68,25 @@ export default function Results() {
           </div>
         </div>
 
+        {/* Friendly-match banner: explicitly tell the player nothing was at stake */}
+        {isFriendly && (
+          <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-3 shadow-[0_4px_0_rgba(0,0,0,0.35)] text-center">
+            <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Partie entre amis</div>
+            <div className="text-xs text-slate-300 mt-1">Aucune récompense, aucune perte d&apos;XP.</div>
+          </div>
+        )}
+
         {/* Rewards */}
         <Show when="signed-in">
-          {reward && (
+          {!isFriendly && reward && (
             <div className="bg-slate-900/80 backdrop-blur rounded-2xl border border-slate-700 p-4 space-y-3 shadow-[0_8px_0_rgba(0,0,0,0.35)]">
               <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center">Récompenses</div>
               <div className="flex items-center justify-around text-sm font-bold">
                 <div className="flex items-center gap-1.5 text-yellow-300">
-                  <span className="text-xl">🪙</span><span>+{reward.goldGain}</span>
+                  <span className="text-xl">🪙</span><span>{reward.goldGain >= 0 ? '+' : ''}{reward.goldGain}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-blue-300">
-                  <span className="text-xs uppercase">XP</span><span>+{reward.xpGain}</span>
+                <div className={`flex items-center gap-1.5 ${reward.xpGain >= 0 ? 'text-blue-300' : 'text-rose-300'}`}>
+                  <span className="text-xs uppercase">XP</span><span>{reward.xpGain >= 0 ? '+' : ''}{reward.xpGain}</span>
                 </div>
                 {reward.leveledUp && (
                   <div className="text-fuchsia-300 font-black animate-pulse">

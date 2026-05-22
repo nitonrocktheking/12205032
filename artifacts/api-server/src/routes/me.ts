@@ -184,18 +184,31 @@ router.post("/me/match-result", requireAuth, async (req: AuthedRequest, res) => 
   const userId = req.userId!;
   await ensureProvisioned(userId);
   if (!(await requireUsernameSet(userId, res))) return;
-  const { result } = req.body as { result?: unknown };
+  const { result, crowns } = req.body as { result?: unknown; crowns?: unknown };
   if (result !== "win" && result !== "loss" && result !== "draw") {
     res.status(400).json({ error: "Invalid result" }); return;
   }
+  // Crowns = enemy towers the player destroyed this match (0..3). Used to
+  // soften the XP penalty on a loss when the player at least took a tower.
+  const crownsNum = typeof crowns === "number" && Number.isFinite(crowns)
+    ? Math.max(0, Math.min(3, Math.floor(crowns)))
+    : 0;
 
   const [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.clerkUserId, userId)).limit(1);
   if (!profile) { res.status(404).json({ error: "Profile not found" }); return; }
 
-  const xpGain   = result === "win" ? 30 : result === "draw" ? 10 : 5;
+  // XP/gold rules. Losses now sting — but taking at least one tower softens
+  // the blow. We never let a loss drop the player below the start of their
+  // current level (no de-leveling).
+  let xpGain: number;
+  if (result === "win")      xpGain = 30;
+  else if (result === "draw") xpGain = 10;
+  else                        xpGain = crownsNum >= 1 ? -5 : -15;
   const goldGain = result === "win" ? 50 : result === "draw" ? 15 : 5;
-  const newXp    = profile.xp + xpGain;
+  const floorXp  = xpToReach(profile.level); // start of current level
+  const newXp    = Math.max(floorXp, profile.xp + xpGain);
   const newLevel = levelFromXp(newXp);
+  const actualXpGain = newXp - profile.xp; // what we actually applied after clamping
 
   // Unlock every card whose level threshold ≤ newLevel that the player
   // doesn't yet own. Deterministic — no randomness.
@@ -212,7 +225,7 @@ router.post("/me/match-result", requireAuth, async (req: AuthedRequest, res) => 
     .where(eq(userProfilesTable.clerkUserId, userId));
 
   res.json({
-    xpGain, goldGain,
+    xpGain: actualXpGain, goldGain,
     newLevel, leveledUp: newLevel > profile.level,
     // Back-compat: keep first unlock as `unlockedCard` for older clients.
     unlockedCard: unlockedCards[0] ?? null,

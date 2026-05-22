@@ -70,6 +70,9 @@ export interface GameState {
   status: 'playing' | 'gameover';
   winner?: Faction | 'draw';
   isMultiplayer: boolean;
+  // True once regulation ended in a crown-tie and we're now in sudden-death.
+  // While true: elixir is 2x, and the first crown destroyed ends the match.
+  isOvertime: boolean;
   elixir: {
     player: number;
     enemy: number;

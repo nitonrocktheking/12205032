@@ -38,12 +38,13 @@ function LobbySession({
         setRoomCode(msg.code);
         setPhase("creating");
       } else if (msg.type === "opponent_joined") {
-        // Host: opponent connected → start game (pass code so we can rejoin the room)
-        setLocation(`/game?seed=${seedRef.current}&faction=player&code=${codeRef.current}`);
+        // Host: opponent connected → start game (pass code so we can rejoin the room).
+        // friend=1 flags this as a private-room match: no XP/gold, no loss recorded.
+        setLocation(`/game?seed=${seedRef.current}&faction=player&code=${codeRef.current}&friend=1`);
       } else if (msg.type === "room_joined") {
         // Guest: we joined → navigate (pass code so we can rejoin the room).
         // Opponent name is fetched server-side via the `rejoined` payload.
-        setLocation(`/game?seed=${msg.seed}&faction=enemy&code=${msg.code}`);
+        setLocation(`/game?seed=${msg.seed}&faction=enemy&code=${msg.code}&friend=1`);
       } else if (msg.type === "opponent_left") {
         setPhase("error");
         setErrorMsg("L'adversaire a quitté la salle.");

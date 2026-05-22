@@ -1,6 +1,7 @@
 import { GameState, CardDef, Faction, Position, Tower, Unit } from "./types";
 import {
   ARENA_WIDTH, ARENA_HEIGHT, GAME_DURATION, MAX_ELIXIR, ELIXIR_RATE,
+  DOUBLE_ELIXIR_THRESHOLD, OVERTIME_DURATION,
   TOWER_KING_HP, TOWER_PRINCESS_HP, TOWER_DAMAGE, TOWER_ATTACK_SPEED, TOWER_RANGE,
   LEFT_BRIDGE_X, RIGHT_BRIDGE_X, RIVER_Y, RIVER_HEIGHT, UNIT_AGGRO_RANGE,
   getTowerPositions
@@ -80,6 +81,7 @@ export const createInitialState = (
     elapsedTime: 0,
     status: 'playing',
     isMultiplayer,
+    isOvertime: false,
     elixir: { player: 5, enemy: isMultiplayer ? 5 : 2 },
     units: [],
     towers: [
@@ -124,11 +126,18 @@ export const updateGame = (state: GameState, dt: number) => {
   state.timeRemaining -= dt;
   state.elapsedTime   += dt;
 
-  if (state.timeRemaining <= 0) { checkWinCondition(state); return; }
+  if (state.timeRemaining <= 0) { checkWinCondition(state); if (state.status !== 'playing') return; }
+
+  // In overtime sudden-death we also re-check every tick — first crown
+  // destroyed ends the match immediately.
+  if (state.isOvertime) checkWinCondition(state);
+  if (state.status !== 'playing') return;
 
   // Elixir — same rate for both players in solo and MP. No AI handicap or boost.
-  state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
-  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * dt);
+  // Doubles during the last 30s of regulation and for the entire overtime.
+  const elixirMult = (state.isOvertime || state.timeRemaining <= DOUBLE_ELIXIR_THRESHOLD) ? 2 : 1;
+  state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt * elixirMult);
+  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * dt * elixirMult);
 
   // Solo AI (disabled in multiplayer). Cadence scales with difficulty: 7s
   // between plays at level 1, ~3s at level 15+.
@@ -704,11 +713,35 @@ const checkWinCondition = (state: GameState) => {
   const eK = state.towers.find(t => t.type === 'king' && t.faction === 'enemy');
   if (!pK || pK.hp <= 0) { state.status = 'gameover'; state.winner = 'enemy'; return; }
   if (!eK || eK.hp <= 0) { state.status = 'gameover'; state.winner = 'player'; return; }
+
+  const pa = state.towers.filter(t => t.faction === 'player' && t.hp > 0).length;
+  const ea = state.towers.filter(t => t.faction === 'enemy'  && t.hp > 0).length;
+
+  // Sudden death: any tower differential ends the match immediately.
+  if (state.isOvertime) {
+    if (pa !== ea) {
+      state.status = 'gameover';
+      state.winner = pa > ea ? 'player' : 'enemy';
+      return;
+    }
+    // Still tied AND overtime expired → draw.
+    if (state.timeRemaining <= 0) {
+      state.status = 'gameover';
+      state.winner = 'draw';
+    }
+    return;
+  }
+
   if (state.timeRemaining <= 0) {
-    const pa = state.towers.filter(t => t.faction === 'player' && t.hp > 0).length;
-    const ea = state.towers.filter(t => t.faction === 'enemy'  && t.hp > 0).length;
+    // Regulation ended in a tower-tie → enter sudden-death overtime instead
+    // of declaring a draw immediately.
+    if (pa === ea) {
+      state.isOvertime = true;
+      state.timeRemaining = OVERTIME_DURATION;
+      return;
+    }
     state.status = 'gameover';
-    state.winner = pa > ea ? 'player' : ea > pa ? 'enemy' : 'draw';
+    state.winner = pa > ea ? 'player' : 'enemy';
   }
 };
 

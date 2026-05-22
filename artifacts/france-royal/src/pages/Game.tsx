@@ -17,13 +17,14 @@ function parseParams() {
   const faction = p.get("faction") as Faction | null;
   const code = p.get("code");
   const opp = p.get("opp");
+  const friend = p.get("friend") === "1";
   const seed = seedStr !== null ? Number(seedStr) : undefined;
   const isMultiplayer = seed !== undefined;
   const localFaction: Faction = faction === "enemy" ? "enemy" : "player";
-  return { seed, isMultiplayer, localFaction, roomCode: code, opponentNameParam: opp };
+  return { seed, isMultiplayer, localFaction, roomCode: code, opponentNameParam: opp, isFriendly: friend };
 }
 
-function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds, localName, opponentNameParam }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[]; localName: string; opponentNameParam: string | null }) {
+function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds, localName, opponentNameParam, isFriendly }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[]; localName: string; opponentNameParam: string | null; isFriendly: boolean }) {
   const [, setLocation] = useLocation();
   // Solo state is built immediately from the player's selected deck. MP state
   // waits until the server returns BOTH decks (via `rejoined`) so both peers
@@ -207,7 +208,8 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 
         setTimeout(() => {
           const mpFlag = isMultiplayer ? "&mp=1" : "";
-          setLocation(`/results?winner=${localWinner}&pCrowns=${localPCrowns}&eCrowns=${localECrowns}${mpFlag}`);
+          const friendFlag = isFriendly ? "&friend=1" : "";
+          setLocation(`/results?winner=${localWinner}&pCrowns=${localPCrowns}&eCrowns=${localECrowns}${mpFlag}${friendFlag}`);
         }, 1000);
         return;
       }
@@ -308,7 +310,7 @@ function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, p
 }
 
 export default function Game() {
-  const { seed, isMultiplayer, localFaction, roomCode, opponentNameParam } = parseParams();
+  const { seed, isMultiplayer, localFaction, roomCode, opponentNameParam, isFriendly } = parseParams();
   const { data: me, isLoading } = useMe();
 
   // Wait for user data before initializing — needed for solo (deck) AND MP
@@ -324,5 +326,5 @@ export default function Game() {
   const ownedCardIds = me?.cards.map((c) => c.cardId) ?? [];
   const localName = me?.profile.displayName ?? "Vous";
 
-  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} localName={localName} opponentNameParam={opponentNameParam} />;
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} localName={localName} opponentNameParam={opponentNameParam} isFriendly={isFriendly} />;
 }

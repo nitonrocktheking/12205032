@@ -101,12 +101,12 @@ export interface MatchResultResp {
 export function useReportMatchResult() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (result: "win" | "loss" | "draw"): Promise<MatchResultResp> => {
+    mutationFn: async (args: { result: "win" | "loss" | "draw"; crowns: number }): Promise<MatchResultResp> => {
       const r = await fetch(api(`/me/match-result`), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ result }),
+        body: JSON.stringify(args),
       });
       if (!r.ok) throw new Error("report failed");
       return r.json();
