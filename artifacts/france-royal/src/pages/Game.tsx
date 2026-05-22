@@ -21,9 +21,11 @@ function parseParams() {
   return { seed, isMultiplayer, localFaction, roomCode: code };
 }
 
-function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null }) {
+function GameInner({ seed, isMultiplayer, localFaction, deck, arena, roomCode, playerLevel, ownedCardIds }: { seed?: number; isMultiplayer: boolean; localFaction: Faction; deck?: string[]; arena: ArenaTheme; roomCode: string | null; playerLevel: number; ownedCardIds: string[] }) {
   const [, setLocation] = useLocation();
-  const gameStateRef = useRef<GameState>(createInitialState(seed, deck));
+  const gameStateRef = useRef<GameState>(
+    createInitialState(seed, deck, undefined, { playerLevel, aiCardPool: ownedCardIds }),
+  );
   const [renderState, setRenderState] = useState<GameState>(() => ({ ...gameStateRef.current }));
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [opponentLeft, setOpponentLeft] = useState(false);
@@ -267,7 +269,9 @@ export default function Game() {
 
   const deck = isMultiplayer ? undefined : getSelectedDeck(me);
   const finalDeck = deck && deck.length === 8 ? deck : undefined;
-  const arena = getArenaForLevel(me?.profile.level ?? 1) ?? ARENAS[0];
+  const playerLevel = me?.profile.level ?? 1;
+  const arena = getArenaForLevel(playerLevel) ?? ARENAS[0];
+  const ownedCardIds = me?.cards.map((c) => c.cardId) ?? [];
 
-  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} />;
+  return <GameInner seed={seed} isMultiplayer={isMultiplayer} localFaction={localFaction} deck={finalDeck} arena={arena} roomCode={roomCode} playerLevel={playerLevel} ownedCardIds={ownedCardIds} />;
 }

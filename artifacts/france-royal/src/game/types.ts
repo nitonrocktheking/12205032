@@ -94,6 +94,12 @@ export interface GameState {
   // Active "Impôt" perimeters. Each enemy unit that enters drains 1 elixir
   // from its faction (once per zone). Auto-expires after `duration`.
   taxZones: TaxZone[];
+  // Solo AI tuning. 0 = beginner (random, slow), 1 = expert (reactive, hoards
+  // elixir, prefers high-cost cards). Computed once from the player's level.
+  aiDifficulty: number;
+  // Card IDs the AI is allowed to play in solo. Restricted to what the player
+  // actually owns, so beginners never face cards they haven't unlocked yet.
+  aiCardPool: string[];
 }
 
 export interface TaxZone {

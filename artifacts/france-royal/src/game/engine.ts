@@ -28,7 +28,17 @@ function shuffleWithRng<T>(arr: T[], rng: () => number): T[] {
 }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
-export const createInitialState = (seed?: number, playerDeckIds?: string[], enemyDeckIds?: string[]): GameState => {
+export interface SoloOptions {
+  playerLevel?: number;
+  aiCardPool?: string[];
+}
+
+export const createInitialState = (
+  seed?: number,
+  playerDeckIds?: string[],
+  enemyDeckIds?: string[],
+  solo?: SoloOptions,
+): GameState => {
   const rng = seed !== undefined ? seededRandom(seed) : Math.random;
 
   const playerTowers = getTowerPositions('player');
@@ -51,6 +61,16 @@ export const createInitialState = (seed?: number, playerDeckIds?: string[], enem
   const playerShuffle = shuffleWithRng(resolveDeck(playerDeckIds), rng);
   const enemyShuffle  = shuffleWithRng(resolveDeck(enemyDeckIds),  rng);
   const isMultiplayer = seed !== undefined;
+
+  // Difficulty ramps from level 1 (purely random AI) to level 15+ (full smart).
+  const level = Math.max(1, solo?.playerLevel ?? 1);
+  const aiDifficulty = Math.min(1, (level - 1) / 14);
+  // AI is restricted to the cards the player owns. Defaults to the player's
+  // current deck if no explicit pool was supplied — that way beginners never
+  // see cards they haven't unlocked yet.
+  const aiCardPool = (solo?.aiCardPool && solo.aiCardPool.length > 0)
+    ? solo.aiCardPool.filter((id) => !!CARDS[id])
+    : (playerDeckIds && playerDeckIds.length > 0 ? playerDeckIds.filter((id) => !!CARDS[id]) : Object.keys(CARDS));
 
   return {
     timeRemaining: GAME_DURATION,
@@ -76,6 +96,8 @@ export const createInitialState = (seed?: number, playerDeckIds?: string[], enem
     enemyNextSpawnTime: GAME_DURATION - 10,
     floatingTexts: [],
     taxZones: [],
+    aiDifficulty,
+    aiCardPool,
   };
 };
 
@@ -93,23 +115,16 @@ export const updateGame = (state: GameState, dt: number) => {
 
   if (state.timeRemaining <= 0) { checkWinCondition(state); return; }
 
-  // Elixir
+  // Elixir — same rate for both players in solo and MP. No AI handicap or boost.
   state.elixir.player = Math.min(MAX_ELIXIR, state.elixir.player + ELIXIR_RATE * dt);
-  if (!state.isMultiplayer) {
-    // Solo AI: regenerates almost as fast as the player (slight handicap only).
-    // Double-speed mode kicks in during the last 30s, like Clash Royale overtime.
-    const aiRegenMult = state.timeRemaining < 30 ? 1.5 : 0.95;
-    state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * aiRegenMult * dt);
-  } else {
-    state.elixir.enemy = Math.min(MAX_ELIXIR, state.elixir.enemy + ELIXIR_RATE * dt);
-  }
+  state.elixir.enemy  = Math.min(MAX_ELIXIR, state.elixir.enemy  + ELIXIR_RATE * dt);
 
-  // Solo AI (disabled in multiplayer).
-  // Boss/admin-only cards (URSSAF) are excluded so the AI never wastes elixir on a spell it can't use.
+  // Solo AI (disabled in multiplayer). Cadence scales with difficulty: 7s
+  // between plays at level 1, ~3s at level 15+.
   if (!state.isMultiplayer && state.timeRemaining <= state.enemyNextSpawnTime) {
     runEnemyAI(state);
-    // Faster decision cadence than before: 3-6s between plays (was 8-14s).
-    state.enemyNextSpawnTime = state.timeRemaining - (3 + Math.random() * 3);
+    const baseCadence = 7 - 4 * state.aiDifficulty;
+    state.enemyNextSpawnTime = state.timeRemaining - (baseCadence + Math.random() * 2);
   }
 
   // Reset speed mults
@@ -225,54 +240,63 @@ export const updateGame = (state: GameState, dt: number) => {
 };
 
 // ─── Solo AI ──────────────────────────────────────────────────────────────────
-// Smarter than the previous random-weighted pick: the AI now reacts to player
-// pushes, holds elixir for bigger plays when safe, and picks lanes deliberately.
+// Behavior scales with `state.aiDifficulty` (0 = beginner, 1 = expert):
+//   - card pool is restricted to `state.aiCardPool` (player-owned cards only)
+//   - low difficulty: random pick, no threat reaction, no hoarding
+//   - high difficulty: reacts to threats, hoards elixir, prefers heavy cards
 const runEnemyAI = (state: GameState) => {
+  const diff = state.aiDifficulty;
+  const allowedIds = new Set(state.aiCardPool);
   const playable = Object.values(CARDS).filter(
-    c => c.special !== 'urssaf' && c.spawnCount > 0 && state.elixir.enemy >= c.cost,
+    c => allowedIds.has(c.id)
+      && c.special !== 'urssaf'
+      && c.spawnCount > 0
+      && state.elixir.enemy >= c.cost,
   );
   if (playable.length === 0) return;
 
-  // Find the strongest player threat on the AI's side of the river.
-  const threats = state.units.filter(
-    u => u.faction === 'player' && u.hp > 0 && u.position.y <= RIVER_Y + 40,
-  );
+  const elx = state.elixir.enemy;
+
+  // Threat detection — only kicks in at mid+ difficulty.
+  const reactsToThreats = diff >= 0.35;
+  const threats = reactsToThreats
+    ? state.units.filter(u => u.faction === 'player' && u.hp > 0 && u.position.y <= RIVER_Y + 40)
+    : [];
   const biggestThreat = threats.length === 0
     ? null
     : threats.reduce((a, b) => (a.hp + a.damage * 2 > b.hp + b.damage * 2 ? a : b));
 
-  // Hoard elixir for a stronger play unless threatened or already capped.
-  const elx = state.elixir.enemy;
-  if (!biggestThreat && elx < MAX_ELIXIR - 0.5) {
-    if (elx < 4) return; // too poor, save up
-    // 35% chance to skip and wait for a fatter wallet, even if a cheap card is available.
+  // Elixir hoarding — only at higher difficulty, and only when not threatened.
+  const hoards = diff >= 0.6;
+  if (hoards && !biggestThreat && elx < MAX_ELIXIR - 0.5) {
+    if (elx < 4) return;
     if (elx < 7 && Math.random() < 0.35) return;
   }
 
-  // Pick a card. If there's a threat, prefer a hard counter (cheap + decent dmg).
-  // Otherwise, favor expensive cards proportional to current elixir.
+  // Card selection.
   let card: CardDef;
   if (biggestThreat) {
     const counters = playable
       .filter(c => c.cost <= Math.max(4, Math.floor(elx)))
       .sort((a, b) => (b.baseDamage * b.spawnCount) - (a.baseDamage * a.spawnCount));
     card = counters[0] ?? playable[Math.floor(Math.random() * playable.length)];
+  } else if (diff < 0.5) {
+    // Beginner AI: random affordable card.
+    card = playable[Math.floor(Math.random() * playable.length)];
   } else {
+    // Expert AI: favor expensive cards.
     const sorted = [...playable].sort((a, b) => b.cost - a.cost);
-    // Skew toward the most expensive affordable cards.
     const pickIdx = Math.floor(Math.pow(Math.random(), 2) * sorted.length);
     card = sorted[pickIdx];
   }
 
-  // Choose lane. If threat exists, drop the counter right on top of it.
-  // Otherwise, push the weakest player lane (princess tower with least HP, or king if both down).
+  // Lane choice.
   let spawnX: number;
   let spawnY: number;
   if (biggestThreat) {
     spawnX = clamp(biggestThreat.position.x, 30, ARENA_WIDTH - 30);
-    // Drop slightly behind the threat (toward AI's side) so the counter can engage.
     spawnY = clamp(biggestThreat.position.y - 25, 50, RIVER_Y - 20);
-  } else {
+  } else if (diff >= 0.5) {
     const playerPrincesses = state.towers.filter(
       t => t.faction === 'player' && t.type === 'princess' && t.hp > 0,
     );
@@ -282,9 +306,12 @@ const runEnemyAI = (state: GameState) => {
     } else {
       target = state.towers.find(t => t.faction === 'player' && t.type === 'king' && t.hp > 0);
     }
-    // Spawn on the AI side, aligned with the chosen lane.
     spawnX = target ? clamp(target.position.x + (Math.random() - 0.5) * 30, 30, ARENA_WIDTH - 30)
                     : 80 + Math.random() * (ARENA_WIDTH - 160);
+    spawnY = 120 + Math.random() * 40;
+  } else {
+    // Beginner: random placement on AI side.
+    spawnX = 60 + Math.random() * (ARENA_WIDTH - 120);
     spawnY = 120 + Math.random() * 40;
   }
 
