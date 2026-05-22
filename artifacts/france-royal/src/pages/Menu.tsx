@@ -21,7 +21,7 @@ function UserBar() {
   const xpPct = Math.min(100, (xpIntoLevel / xpPerLevel) * 100);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900/95 to-slate-800/80 backdrop-blur-md p-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
+    <div className="relative rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900/95 to-slate-800/80 backdrop-blur-md p-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
       <div className="flex items-center gap-2.5">
         {/* Level avatar with XP ring (ring already conveys XP progress) */}
