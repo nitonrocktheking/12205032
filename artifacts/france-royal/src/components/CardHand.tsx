@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useT } from "../hooks/useT";
 
 function CardTooltip({ card }: { card: CardDef }) {
-  const { t } = useT();
+  const { t, ct } = useT();
   return (
     <motion.div
       key={card.id}
@@ -40,7 +40,7 @@ function CardTooltip({ card }: { card: CardDef }) {
           <div className="flex-1 min-w-0">
             {/* Names */}
             <div className="font-black text-white text-sm leading-tight">{card.fullName}</div>
-            <div className="text-[10px] text-slate-400 mb-2 font-medium">{card.name}</div>
+            <div className="text-[10px] text-slate-400 mb-2 font-medium">{ct(card, "name")}</div>
 
             {/* Power badge */}
             <div
@@ -48,12 +48,12 @@ function CardTooltip({ card }: { card: CardDef }) {
               style={{ background: `${card.color}44`, border: `1px solid ${card.color}88` }}
             >
               <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: '#fff' }}>
-                {card.powerName}
+                {ct(card, "powerName")}
               </span>
             </div>
 
             {/* Description */}
-            <div className="text-[10px] text-slate-300 leading-snug">{card.powerDesc}</div>
+            <div className="text-[10px] text-slate-300 leading-snug">{ct(card, "powerDesc")}</div>
           </div>
         </div>
 
@@ -91,7 +91,7 @@ export default function CardHand({
   selected: number | null;
   onSelect: (idx: number | null) => void;
 }) {
-  const { t } = useT();
+  const { t, ct } = useT();
   const selectedCard = selected !== null ? hand[selected] : null;
 
   return (
@@ -187,7 +187,7 @@ export default function CardHand({
                     className="text-[8px] font-bold leading-tight truncate mt-0.5"
                     style={{ color: card.color === '#1e3a5f' ? '#93c5fd' : `${card.color}ee` }}
                   >
-                    {card.powerName}
+                    {ct(card, "powerName")}
                   </div>
                 </div>
               </motion.div>

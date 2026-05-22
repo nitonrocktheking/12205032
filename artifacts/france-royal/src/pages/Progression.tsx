@@ -5,7 +5,6 @@ import { CARDS } from "../game/cards";
 import { Button } from "@/components/ui/button";
 import { useT } from "../hooks/useT";
 
-type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
 const XP_PER_WIN = 30;
 
@@ -136,7 +135,7 @@ export default function Progression() {
 
             <ol className="space-y-2.5">
               {rows.map((row) => (
-                <ProgressionRow key={row.entry.cardId} row={row} t={t} />
+                <ProgressionRow key={row.entry.cardId} row={row} />
               ))}
             </ol>
           </div>
@@ -161,7 +160,8 @@ function Stat({ label, value, icon }: { label: string; value: string; icon?: Rea
   );
 }
 
-function ProgressionRow({ row, t }: { row: Row; t: TFn }) {
+function ProgressionRow({ row }: { row: Row }) {
+  const { t, ct } = useT();
   const { entry, status, winsAway, xpAway } = row;
   const card = CARDS[entry.cardId];
   if (!card) return null;
@@ -216,7 +216,7 @@ function ProgressionRow({ row, t }: { row: Row; t: TFn }) {
             {card.fullName}
           </div>
           <div className="text-[10px] text-slate-400 font-semibold truncate">
-            {card.powerName}
+            {ct(card, "powerName")}
           </div>
           {!isOwned && (
             <div className={`text-[10px] font-bold mt-0.5 ${isNext ? "text-amber-300" : "text-slate-400"}`}>

@@ -7,7 +7,7 @@ import { CARDS } from "../game/cards";
 import { useT } from "../hooks/useT";
 
 export default function Results() {
-  const { t } = useT();
+  const { t, ct } = useT();
   const searchParams = new URLSearchParams(window.location.search);
   const winner  = searchParams.get('winner');
   const pCrowns = searchParams.get('pCrowns');
@@ -113,7 +113,7 @@ export default function Results() {
                       />
                       <div className="text-left flex-1 min-w-0">
                         <div className="font-black text-white truncate">{CARDS[id].fullName}</div>
-                        <div className="text-xs text-amber-200 truncate">{CARDS[id].powerName}</div>
+                        <div className="text-xs text-amber-200 truncate">{ct(CARDS[id], "powerName")}</div>
                       </div>
                     </div>
                   ))}

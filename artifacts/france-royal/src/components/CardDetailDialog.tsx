@@ -27,7 +27,7 @@ function StatRow({ icon: Icon, label, value, color = "#cbd5e1" }: {
 }
 
 export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
-  const { t } = useT();
+  const { t, ct } = useT();
   const card = cardId ? CARDS[cardId] : null;
   const open = !!card;
 
@@ -35,7 +35,7 @@ export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-slate-950 border border-slate-700 text-white max-w-sm p-0 overflow-hidden">
         <DialogTitle className="sr-only">{card?.fullName ?? t("card_detail.card_fallback")}</DialogTitle>
-        <DialogDescription className="sr-only">{card?.powerName ?? ""}</DialogDescription>
+        <DialogDescription className="sr-only">{card ? ct(card, "powerName") : ""}</DialogDescription>
         {card && (
           <div className="flex flex-col">
             {/* Header banner with image */}
@@ -66,7 +66,7 @@ export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
                 </div>
               )}
               <div className="absolute inset-x-0 bottom-0 px-4 py-3">
-                <div className="text-[10px] uppercase tracking-widest text-white/70 font-bold">{card.name}</div>
+                <div className="text-[10px] uppercase tracking-widest text-white/70 font-bold">{ct(card, "name")}</div>
                 <h2 className="text-2xl font-black text-white drop-shadow leading-tight">{card.fullName}</h2>
               </div>
             </div>
@@ -76,9 +76,9 @@ export default function CardDetailDialog({ cardId, locked, onClose }: Props) {
               <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 text-amber-300 text-[10px] uppercase tracking-widest font-black mb-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {card.powerName}
+                  {ct(card, "powerName")}
                 </div>
-                <p className="text-slate-200 text-sm leading-snug">{card.powerDesc}</p>
+                <p className="text-slate-200 text-sm leading-snug">{ct(card, "powerDesc")}</p>
               </div>
             </div>
 
