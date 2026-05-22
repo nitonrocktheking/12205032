@@ -387,17 +387,17 @@ export default function Arena({ state, onClick, flipped = false, localFaction = 
         />
       ))}
 
-      {/* Placement zone overlay — red tinted area on the deployable half */}
+      {/* Placement zone overlay — red tint on the enemy half (visual target indicator) */}
       {placing && (
         <div
           className="absolute pointer-events-none z-[7]"
           style={{
             left: "4%", right: "4%",
-            top: "50%", bottom: "2.5%",
+            top: "2.5%", bottom: "50%",
             background:
-              "repeating-linear-gradient(45deg, rgba(239,68,68,0.18) 0px, rgba(239,68,68,0.18) 12px, rgba(239,68,68,0.08) 12px, rgba(239,68,68,0.08) 24px)",
-            border: "2px dashed rgba(248,113,113,0.85)",
-            boxShadow: "inset 0 0 25px rgba(239,68,68,0.35)",
+              "repeating-linear-gradient(45deg, rgba(220,38,38,0.45) 0px, rgba(220,38,38,0.45) 12px, rgba(185,28,28,0.30) 12px, rgba(185,28,28,0.30) 24px)",
+            border: "3px dashed rgba(254,202,202,0.95)",
+            boxShadow: "inset 0 0 40px rgba(220,38,38,0.7), 0 0 18px rgba(220,38,38,0.55)",
             animation: "tax-pulse 1.4s ease-in-out infinite",
           }}
         />
