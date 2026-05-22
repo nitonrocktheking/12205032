@@ -83,20 +83,26 @@ export default function Results() {
                 )}
               </div>
 
-              {reward.unlockedCard && CARDS[reward.unlockedCard] && (
-                <div className="border-t border-slate-700 pt-3">
-                  <div className="text-[10px] uppercase tracking-widest text-amber-300 mb-2 text-center font-bold">Nouvelle carte débloquée</div>
-                  <div className="flex items-center gap-3 bg-slate-800/60 rounded-xl p-2.5">
-                    <img
-                      src={CARDS[reward.unlockedCard].imagePath}
-                      alt={CARDS[reward.unlockedCard].fullName}
-                      className="w-14 h-14 rounded-lg object-cover object-top border-2 border-amber-400 shadow-[0_3px_0_rgba(0,0,0,0.4)]"
-                    />
-                    <div className="text-left flex-1 min-w-0">
-                      <div className="font-black text-white truncate">{CARDS[reward.unlockedCard].fullName}</div>
-                      <div className="text-xs text-amber-200 truncate">{CARDS[reward.unlockedCard].powerName}</div>
-                    </div>
+              {reward.unlockedCards && reward.unlockedCards.length > 0 && (
+                <div className="border-t border-slate-700 pt-3 space-y-2">
+                  <div className="text-[10px] uppercase tracking-widest text-amber-300 text-center font-bold">
+                    {reward.unlockedCards.length > 1
+                      ? `${reward.unlockedCards.length} nouvelles cartes débloquées`
+                      : "Nouvelle carte débloquée"}
                   </div>
+                  {reward.unlockedCards.filter((id) => CARDS[id]).map((id) => (
+                    <div key={id} className="flex items-center gap-3 bg-slate-800/60 rounded-xl p-2.5">
+                      <img
+                        src={CARDS[id].imagePath}
+                        alt={CARDS[id].fullName}
+                        className="w-14 h-14 rounded-lg object-cover object-top border-2 border-amber-400 shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+                      />
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="font-black text-white truncate">{CARDS[id].fullName}</div>
+                        <div className="text-xs text-amber-200 truncate">{CARDS[id].powerName}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

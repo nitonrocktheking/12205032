@@ -7,15 +7,14 @@ import CardTile from "../components/CardTile";
 import { getArenaForLevel, getNextArena } from "../game/arenas";
 import LogoutButton from "../components/LogoutButton";
 import { SPLASH_SEEN_KEY } from "./Splash";
-import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle } from "lucide-react";
+import { Swords, Globe2, Library, Layers, Coins, Trophy, HelpCircle, TrendingUp } from "lucide-react";
 
 function UserBar() {
   const { data: me } = useMe();
   if (!me) return null;
 
-  const xpForLevel = (lvl: number) => 100 + (lvl - 1) * 50;
-  const xpNeeded = xpForLevel(me.profile.level);
-  const xpPct = Math.min(100, (me.profile.xp / xpNeeded) * 100);
+  const { xpIntoLevel, xpPerLevel } = me.progression;
+  const xpPct = Math.min(100, (xpIntoLevel / xpPerLevel) * 100);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900/95 to-slate-800/80 backdrop-blur-md p-3 shadow-[0_6px_0_rgba(0,0,0,0.4)]">
@@ -48,7 +47,7 @@ function UserBar() {
               <span className="text-slate-600">·</span>
               <span>{me.profile.losses}D</span>
               <span className="text-slate-600">·</span>
-              <span>{Math.round(me.profile.xp)}/{xpNeeded} XP</span>
+              <span>{Math.round(xpIntoLevel)}/{xpPerLevel} XP</span>
             </div>
           </div>
         </div>
@@ -244,6 +243,16 @@ export default function Menu() {
                 </Button>
               </Link>
             </div>
+            <Link href="/progression">
+              <Button
+                variant="outline"
+                className="w-full h-11 text-xs font-bold border-amber-600/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:border-amber-400 shadow-[0_3px_0_rgba(0,0,0,0.4)]"
+                data-testid="button-progression"
+              >
+                <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
+                Arbre de progression
+              </Button>
+            </Link>
             <Link href="/splash">
               <Button
                 variant="ghost"

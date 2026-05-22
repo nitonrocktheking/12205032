@@ -16,6 +16,7 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import Collection from "./pages/Collection";
 import DeckEditor from "./pages/DeckEditor";
+import Progression from "./pages/Progression";
 import Admin from "./pages/Admin";
 import UsernameSetup from "./pages/UsernameSetup";
 import Splash from "./pages/Splash";
@@ -148,6 +149,14 @@ function GuardedDeckEditor() {
     </>
   );
 }
+function GuardedProgression() {
+  return (
+    <>
+      <Show when="signed-in"><RequireUsername><Progression /></RequireUsername></Show>
+      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+    </>
+  );
+}
 
 function ClerkCacheInvalidator() {
   const { addListener } = useClerk();
@@ -191,6 +200,7 @@ function ClerkRouter() {
             <Route path="/lobby"       component={GuardedLobby} />
             <Route path="/collection"  component={GuardedCollection} />
             <Route path="/deck"        component={GuardedDeckEditor} />
+            <Route path="/progression" component={GuardedProgression} />
             <Route path="/results">
               <Show when="signed-in"><RequireUsername><Results /></RequireUsername></Show>
               <Show when="signed-out"><Redirect to="/sign-in" /></Show>

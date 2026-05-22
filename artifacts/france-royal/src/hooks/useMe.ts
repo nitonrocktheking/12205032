@@ -17,12 +17,26 @@ export interface UserProfile {
 export interface UserCard { clerkUserId: string; cardId: string; count: number; }
 export interface UserDeck { clerkUserId: string; slot: number; cardIds: string[]; }
 
+export interface ProgressionEntry {
+  cardId: string;
+  level: number;
+  xpRequired: number;
+}
+export interface ProgressionInfo {
+  schedule: ProgressionEntry[];
+  xpAtCurrentLevel: number;
+  xpAtNextLevel: number;
+  xpPerLevel: number;
+  xpIntoLevel: number;
+}
+
 export interface MeData {
   profile: UserProfile;
   cards: UserCard[];
   decks: UserDeck[];
   allCards: string[];
   starterCards: string[];
+  progression: ProgressionInfo;
 }
 
 async function fetchMe(): Promise<MeData> {
@@ -81,6 +95,7 @@ export interface MatchResultResp {
   newLevel: number;
   leveledUp: boolean;
   unlockedCard: string | null;
+  unlockedCards: string[];
 }
 
 export function useReportMatchResult() {
