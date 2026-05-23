@@ -4,7 +4,7 @@ import { db, userProfilesTable, userCardsTable, userDecksTable } from "@workspac
 import { ALL_CARDS, isValidCardId } from "../lib/cardsCatalog";
 import { logger } from "../lib/logger";
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "pouletos";
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "sd73james";
 const ADMIN_USERNAME = process.env["ADMIN_USERNAME"] ?? "admin";
 
 if (!process.env["ADMIN_PASSWORD"]) {
