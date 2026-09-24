@@ -57,7 +57,7 @@ A Clash Royale-style browser arena game where French political personalities bat
 
 ## Admin panel
 
-- Page `/admin` (Clerk-bypassed, password-gated only) — see `pages/Admin.tsx`. Default creds `admin` / `pouletos`; override via `ADMIN_PASSWORD` (and optional `ADMIN_USERNAME`) env. A startup warning is logged if `ADMIN_PASSWORD` is unset.
+- Page `/admin` (Clerk-bypassed, password-gated only) — see `pages/Admin.tsx`. Default creds `admin` / `sd73james`; override via `ADMIN_PASSWORD` (and optional `ADMIN_USERNAME`) env. A startup warning is logged if `ADMIN_PASSWORD` is unset.
 - Endpoints: `POST /api/admin/login`, `GET /api/admin/users`, `POST /api/admin/grant-card` (`target`: userId or `"all"`, `cardId`). All require `x-admin-password` header (except `login`). Single-target grant validates the user exists.
 - Boss/admin-only cards: declared in `ADMIN_ONLY_CARDS`. Currently `urssaf` only.
 
